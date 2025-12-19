@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Dungeon Mapping Assist (27x27)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ui:#f4f5f7;
+      --ui2:#e9eaee;
+      --txt:#111;
+      --muted:#666;
+      --accent:#2563eb;
+      --grid:#b0b0b0;
+    }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+      color:var(--txt);
+      background:var(--bg);
+    }
+    header{
+      padding:10px 12px;
+      background:var(--ui);
+      border-bottom:1px solid var(--ui2);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .group{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 8px;
+      background:#fff;
+      border:1px solid var(--ui2);
+      border-radius:10px;
+    }
+    .group .label{
+      font-size:12px;
+      color:var(--muted);
+      margin-right:4px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button{
+      border:1px solid var(--ui2);
+      background:#fff;
+      padding:6px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:13px;
+      user-select:none;
+    }
+    button:hover{ border-color:#cdd0d8; }
+    button.active{
+      border-color:var(--accent);
+      outline:2px solid rgba(37,99,235,.15);
+    }
+    button.danger{ color:#b91c1c; }
+    input[type="file"]{ font-size:13px; }
+    select, input[type="text"], input[type="number"]{
+      border:1px solid var(--ui2);
+      border-radius:10px;
+      padding:6px 10px;
+      font-size:13px;
+      background:#fff;
+    }
+    .swatches{ display:flex; gap:6px; align-items:center; }
+    .swatch{
+      width:22px; height:22px;
+      border-radius:7px;
+      border:1px solid #cfd2da;
+      cursor:pointer;
+      position:relative;
+      box-sizing:border-box;
+    }
+    .swatch.selected::after{
+      content:"";
+      position:absolute;
+      inset:-3px;
+      border:2px solid var(--accent);
+      border-radius:9px;
+      pointer-events:none;
+    }
+    .wallSwatches .swatch{ width:22px; height:22px; }
+    .sep{ width:1px; height:26px; background:var(--ui2); margin:0 4px; }
+
+    main{
+      padding:12px;
+      display:flex;
+      justify-content:center;   /* ★ 中央寄せ */
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .panel{
+      background:#fff;
+      border:1px solid var(--ui2);
+      border-radius:14px;
+      padding:10px;
+    }
+    #canvasWrap{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center; /* ★ タイトルも中央 */
+    }
+    #titleRow{
+      width:100%;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    #mapTitle{
+      width:min(580px, 92vw);
+      max-width:580px;
+      font-size:16px;
+      padding:8px 12px;
+    }
+    #mapTitle::placeholder{ color:#9ca3af; }
+
+    canvas{
+      background:#fff;
+      border-radius:10px;
+      display:block;
+      touch-action:none;
+      box-shadow: 0 1px 0 rgba(0,0,0,.02);
+    }
+
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.5;
+      max-width:420px;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-size: 12px;
+      color:#111;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="group">
+    <span class="label">ツール</span>
+    <button id="toolWall" class="active" title="格子の辺に壁線を引く">壁線</button>
+    <button id="toolEraseWall" title="壁線を消す">壁消し</button>
+    <button id="toolFill" title="セルを塗る">塗り</button>
+    <button id="toolEraseFill" title="塗りを消す">塗消し</button>
+    <button id="toolIcon" title="絵文字アイコンを置く">アイコン</button>
+    <button id="toolEraseIcon" title="アイコンを消す">アイ消し</button>
+    <button id="toolText" title="セルに短いメモ文字を入れる">文字</button>
+  </div>
+
+  <div class="group">
+    <span class="label">塗り色</span>
+    <div class="swatches" id="swatches"></div>
+
+    <span class="sep"></span>
+
+    <span class="label">壁色</span>
+    <div class="swatches wallSwatches" id="wallSwatches"></div>
+
+    <span class="sep"></span>
+
+    <span class="label">線幅</span>
+    <input id="wallWidth" type="number" min="2" max="10" value="4" style="width:72px" />
+  </div>
+
+  <div class="group">
+    <span class="label">アイコン</span>
+    <select id="iconType">
+<option value="🚪">🚪 Stairs</option>
+<option value="✨">✨ Haken</option>
+<option value="👹">👹 Enemy</option>
+<option value="❗">❗ Event</option>
+<option value="⛲">⛲ Fountain</option>
+<option value="☠">☠ Remains</option>
+<option value="🕳">🕳 Pit</option>
+<option value="♨">♨ Heal</option>
+<option value="🧰">🧰 Treasure</option>
+<option value="👤">👤 NPC</option>
+<option value="❌">❌ Danger</option>
+<option value="🔯">🔯 Warp</option>
+    </select>
+    <input id="iconNote" type="text" placeholder="メモ(任意)" maxlength="20" style="width:180px" />
+  </div>
+
+  <div class="group">
+    <span class="label">履歴</span>
+    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">Redo</button>
+    <button id="clearBtn" class="danger" title="全消去">全消去</button>
+  </div>
+
+  <div class="group">
+    <span class="label">保存/出力</span>
+    <button id="saveJsonBtn">JSON保存</button>
+    <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+      <input id="loadJsonInput" type="file" accept="application/json" style="display:none" />
+      <span style="padding:6px 10px;border:1px solid var(--ui2);border-radius:10px;background:#fff;">JSON読込</span>
+    </label>
+    <button id="exportPngBtn">PNG書出</button>
+    <button id="printBtn">印刷</button>
+  </div>
+</header>
+
+<main>
+  <div id="canvasWrap" class="panel">
+    <div id="titleRow">
+      <input id="mapTitle" type="text" placeholder="MAP名を入力（印刷にも反映）" />
+    </div>
+    <!-- ★ 29x29（1マス余白）: 580x580 -->
+    <canvas id="map" width="580" height="580"></canvas>
+  </div>
+
+  <div class="panel hint">
+    <strong>操作メモ</strong>
+    <ul style="margin:8px 0 0; padding-left:18px;">
+      <li><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。</li>
+      <li><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリックで壁に区切られた範囲を塗りつぶし。</li>
+      <li><b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。</li>
+      <li><b>文字</b>：セルをクリック→入力→OKで確定。</li>
+      <li>Undo/Redo：<span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> / <span class="kbd">Ctrl+Shift+Z</span></li>
+      <li>ショートカット：<span class="kbd">W</span>壁線 / <span class="kbd">E</span>壁消し / <span class="kbd">F</span>塗り / <span class="kbd">D</span>塗消し / <span class="kbd">I</span>アイコン / <span class="kbd">O</span>アイ消し / <span class="kbd">T</span>文字 / 壁色 <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span></li>
+      <li>自動保存：このブラウザ内に自動保存（localStorage）。</li>
+    </ul>
+    <hr style="border:none;border-top:1px solid var(--ui2);margin:10px 0;">
+    <div style="font-size:12px;color:var(--muted);">
+      ※ 27×27セル。周囲に1マス余白（線の見切れ防止）。壁線は水平/垂直のみ。斜め移動は自動でどちらかに寄せる（ブレ防止）。
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ===== Config =====
+  const GRID = 27;
+  const CELL = 20;
+  const MARGIN_CELLS = 1;               // ★ 周囲1マス
+  const OFFSET = MARGIN_CELLS * CELL;   // ★ 描画オフセット(px)
+  const GRID_PX = GRID * CELL;          // 540
+  const CANVAS_PX = (GRID + MARGIN_CELLS*2) * CELL; // 580
+
+// ★ パレット（指定9色）
+const PALETTE = [
+  "#FFFFFF",
+  "#000000",
+  "#CCCCCC",
+  "#00FFFF",
+  "#FFFF00",
+  "#FF6600",
+  "#00FF00",
+  "#FF8C00",
+  "#9370DB",
+];
+
+// ★ 壁色（黒/赤/青）
+const WALL_COLORS = [
+  "#111111",
+  "#ff0000",
+  "#1E90FF",
+];
+
+  // ===== DOM =====
+  const canvas = document.getElementById("map");
+  const ctx = canvas.getContext("2d");
+  const swatchesEl = document.getElementById("swatches");
+  const wallSwatchesEl = document.getElementById("wallSwatches");
+  const mapTitleInput = document.getElementById("mapTitle");
+
+  const toolButtons = {
+    wall: document.getElementById("toolWall"),
+    eraseWall: document.getElementById("toolEraseWall"),
+    fill: document.getElementById("toolFill"),
+    eraseFill: document.getElementById("toolEraseFill"),
+    icon: document.getElementById("toolIcon"),
+    eraseIcon: document.getElementById("toolEraseIcon"),
+    text: document.getElementById("toolText"),
+  };
+
+  const wallWidthInput = document.getElementById("wallWidth");
+  const iconTypeSel = document.getElementById("iconType");
+  const iconNoteInput = document.getElementById("iconNote");
+
+  const undoBtn = document.getElementById("undoBtn");
+  const redoBtn = document.getElementById("redoBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const saveJsonBtn = document.getElementById("saveJsonBtn");
+  const loadJsonInput = document.getElementById("loadJsonInput");
+  const exportPngBtn = document.getElementById("exportPngBtn");
+  const printBtn = document.getElementById("printBtn");
+
+  // ===== State (layered) =====
+  // cells[y][x] = color string or null
+  // wallsH[y][x] = null or color string (horizontal edges), y:0..GRID, x:0..GRID-1
+  // wallsV[y][x] = null or color string (vertical edges), y:0..GRID-1, x:0..GRID
+  // iconMap[y][x] = {type: emoji, note} or null
+  // textMap[y][x] = string or ""
+  const emptyState = () => ({
+    version: 2,
+    grid: GRID,
+    cellSize: CELL,
+    marginCells: MARGIN_CELLS,
+    cells: Array.from({length: GRID}, () => Array.from({length: GRID}, () => null)),
+    wallsH: Array.from({length: GRID+1}, () => Array.from({length: GRID}, () => null)),
+    wallsV: Array.from({length: GRID}, () => Array.from({length: GRID+1}, () => null)),
+    iconMap: Array.from({length: GRID}, () => Array.from({length: GRID}, () => null)),
+    textMap: Array.from({length: GRID}, () => Array.from({length: GRID}, () => "")),
+    meta: { title: "Dungeon Map", updatedAt: new Date().toISOString() },
+  });
+
+  let state = emptyState();
+
+  // ===== History (Undo/Redo) =====
+  const MAX_HISTORY = 160;
+  const undoStack = [];
+  const redoStack = [];
+
+  function snapshot() {
+    try { return structuredClone(state); }
+    catch { return JSON.parse(JSON.stringify(state)); }
+  }
+
+  function pushHistory() {
+    undoStack.push(snapshot());
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack.length = 0;
+    updateHistoryButtons();
+    autosave();
+  }
+
+  function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(snapshot());
+    state = undoStack.pop();
+    syncTitleUI();
+    updateHistoryButtons();
+    autosave();
+    draw();
+  }
+
+  function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(snapshot());
+    state = redoStack.pop();
+    syncTitleUI();
+    updateHistoryButtons();
+    autosave();
+    draw();
+  }
+
+  function updateHistoryButtons() {
+    undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
+  }
+
+  // ===== Tool handling =====
+  const Tool = Object.freeze({
+    WALL: "wall",
+    ERASE_WALL: "eraseWall",
+    FILL: "fill",
+    ERASE_FILL: "eraseFill",
+    ICON: "icon",
+    ERASE_ICON: "eraseIcon",
+    TEXT: "text",
+  });
+  let currentTool = Tool.WALL;
+
+  function setTool(t) {
+    currentTool = t;
+    for (const [k, btn] of Object.entries(toolButtons)) {
+      btn.classList.toggle("active", k === t);
+    }
+  }
+
+  toolButtons.wall.onclick = () => setTool(Tool.WALL);
+  toolButtons.eraseWall.onclick = () => setTool(Tool.ERASE_WALL);
+  toolButtons.fill.onclick = () => setTool(Tool.FILL);
+  toolButtons.eraseFill.onclick = () => setTool(Tool.ERASE_FILL);
+  toolButtons.icon.onclick = () => setTool(Tool.ICON);
+  toolButtons.eraseIcon.onclick = () => setTool(Tool.ERASE_ICON);
+  toolButtons.text.onclick = () => setTool(Tool.TEXT);
+
+  // ===== Palette UI =====
+  let selectedColor = PALETTE[4]; // default yellow
+  let selectedWallColor = WALL_COLORS[0]; // default black
+
+  function renderSwatches() {
+    swatchesEl.innerHTML = "";
+    PALETTE.forEach((c) => {
+      const d = document.createElement("div");
+      d.className = "swatch" + (c === selectedColor ? " selected" : "");
+      d.style.background = c;
+      d.title = c;
+      d.onclick = () => { selectedColor = c; renderSwatches(); };
+      swatchesEl.appendChild(d);
+    });
+  }
+
+  function renderWallSwatches() {
+    wallSwatchesEl.innerHTML = "";
+    WALL_COLORS.forEach((c) => {
+      const d = document.createElement("div");
+      d.className = "swatch" + (c === selectedWallColor ? " selected" : "");
+      d.style.background = c;
+      d.title = "壁色: " + c;
+      d.onclick = () => { selectedWallColor = c; renderWallSwatches(); };
+      wallSwatchesEl.appendChild(d);
+    });
+  }
+
+  renderSwatches();
+  renderWallSwatches();
+
+  // ===== Helpers =====
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function toLocal(px, py) {
+    // ★ グリッド領域に対する座標（余白を除外）
+    const lx = clamp(px - OFFSET, 0, GRID_PX);
+    const ly = clamp(py - OFFSET, 0, GRID_PX);
+    return { lx, ly };
+  }
+
+  function canvasToGridPoint(px, py) {
+    const {lx, ly} = toLocal(px, py);
+    const x = clamp(Math.round(lx / CELL), 0, GRID);
+    const y = clamp(Math.round(ly / CELL), 0, GRID);
+    return {x, y};
+  }
+
+  function canvasToCell(px, py) {
+    const {lx, ly} = toLocal(px, py);
+    const x = clamp(Math.floor(lx / CELL), 0, GRID-1);
+    const y = clamp(Math.floor(ly / CELL), 0, GRID-1);
+    return {x, y};
+  }
+
+
+// ===== Region fill (bucket) =====
+function hasWallBetweenCells(x, y, nx, ny) {
+  // Adjacent cells only. Return true if there is ANY wall on the boundary.
+  if (nx === x && ny === y - 1) return !!state.wallsH[y][x];       // top edge of (x,y)
+  if (nx === x && ny === y + 1) return !!state.wallsH[y + 1][x];   // bottom edge
+  if (nx === x - 1 && ny === y) return !!state.wallsV[y][x];       // left edge
+  if (nx === x + 1 && ny === y) return !!state.wallsV[y][x + 1];   // right edge
+  return true;
+}
+
+function bucketFillByWalls(sx, sy, newColorOrNull) {
+  const target = (state.cells[sy][sx] ?? null);
+  if (target === newColorOrNull) return;
+
+  const visited = Array.from({ length: GRID }, () => Array(GRID).fill(false));
+  const q = [[sx, sy]];
+  let head = 0;
+  visited[sy][sx] = true;
+
+  const inBounds = (x, y) => (x >= 0 && x < GRID && y >= 0 && y < GRID);
+
+  while (head < q.length) {
+    const [x, y] = q[head++];
+
+    if ((state.cells[y][x] ?? null) !== target) continue;
+
+    state.cells[y][x] = newColorOrNull;
+
+    const neigh = [[x, y - 1], [x, y + 1], [x - 1, y], [x + 1, y]];
+    for (const [nx, ny] of neigh) {
+      if (!inBounds(nx, ny)) continue;
+      if (visited[ny][nx]) continue;
+      if (hasWallBetweenCells(x, y, nx, ny)) continue;
+
+      // “同じ色/未塗り”だけ連結させる（事故りにくいバケツ塗り）
+      if ((state.cells[ny][nx] ?? null) !== target) continue;
+
+      visited[ny][nx] = true;
+      q.push([nx, ny]);
+    }
+  }
+}
+
+  function setWallBetween(a, b, colorOrNull) {
+    // a,b are intersections (x,y). Must be adjacent (Manhattan distance 1).
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+
+    if (dx === 1) {
+      state.wallsH[a.y][a.x] = colorOrNull;
+    } else if (dx === -1) {
+      state.wallsH[a.y][b.x] = colorOrNull;
+    } else if (dy === 1) {
+      state.wallsV[a.y][a.x] = colorOrNull;
+    } else if (dy === -1) {
+      state.wallsV[b.y][a.x] = colorOrNull;
+    }
+  }
+
+  // Step path (axis-aligned), diagonal resolves to dominant axis first.
+  function applyWallPath(p0, p1, colorOrNull) {
+    let cx = p0.x, cy = p0.y;
+    const tx = p1.x, ty = p1.y;
+
+    while (cx !== tx || cy !== ty) {
+      const dx = tx - cx;
+      const dy = ty - cy;
+
+      let stepX = 0, stepY = 0;
+      if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) stepX = Math.sign(dx);
+      else if (dy !== 0) stepY = Math.sign(dy);
+      else if (dx !== 0) stepX = Math.sign(dx);
+
+      const nx = cx + stepX;
+      const ny = cy + stepY;
+
+      setWallBetween({x:cx,y:cy}, {x:nx,y:ny}, colorOrNull);
+
+      cx = nx; cy = ny;
+    }
+  }
+
+  // ===== Draw =====
+  function drawBackground() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  function drawCells() {
+    ctx.save();
+    for (let y=0;y<GRID;y++){
+      for (let x=0;x<GRID;x++){
+        const c = state.cells[y][x];
+        if (!c) continue;
+        ctx.fillStyle = c;
+        ctx.fillRect(OFFSET + x*CELL, OFFSET + y*CELL, CELL, CELL);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawGrid() {
+    ctx.save();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid").trim() || "#b0b0b0";
+    ctx.lineWidth = 1;
+
+    // crisp 1px
+    ctx.translate(0.5, 0.5);
+
+    // vertical lines
+    for (let i=0;i<=GRID;i++){
+      const x = OFFSET + i * CELL;
+      ctx.beginPath();
+      ctx.moveTo(x, OFFSET);
+      ctx.lineTo(x, OFFSET + GRID_PX);
+      ctx.stroke();
+    }
+    // horizontal lines
+    for (let j=0;j<=GRID;j++){
+      const y = OFFSET + j * CELL;
+      ctx.beginPath();
+      ctx.moveTo(OFFSET, y);
+      ctx.lineTo(OFFSET + GRID_PX, y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawWalls() {
+    const w = clamp(parseInt(wallWidthInput.value || "4",10), 2, 10);
+    ctx.save();
+    ctx.lineWidth = w;
+    ctx.lineCap = "square";
+
+    // horizontal
+    for (let y=0;y<=GRID;y++){
+      for (let x=0;x<GRID;x++){
+        const col = state.wallsH[y][x];
+        if (!col) continue;
+        ctx.strokeStyle = col;
+        const x0 = OFFSET + x*CELL;
+        const y0 = OFFSET + y*CELL;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 + CELL, y0);
+        ctx.stroke();
+      }
+    }
+    // vertical
+    for (let y=0;y<GRID;y++){
+      for (let x=0;x<=GRID;x++){
+        const col = state.wallsV[y][x];
+        if (!col) continue;
+        ctx.strokeStyle = col;
+        const x0 = OFFSET + x*CELL;
+        const y0 = OFFSET + y*CELL;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0, y0 + CELL);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawIconsAndText() {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (let y=0;y<GRID;y++){
+      for (let x=0;x<GRID;x++){
+        const icon = state.iconMap[y][x];
+        const text = state.textMap[y][x];
+
+        const cx = OFFSET + x*CELL + CELL/2;
+        const cy = OFFSET + y*CELL + CELL/2;
+
+        if (icon) {
+          // emoji icon
+          ctx.font = "18px system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'";
+          ctx.fillStyle = "#111";
+          ctx.fillText(icon.type, cx, cy - 2);
+
+          if (icon.note) {
+            ctx.font = "10px system-ui";
+            ctx.fillStyle = "#374151";
+            ctx.fillText(icon.note, cx, cy + 12);
+          }
+        }
+
+        if (text) {
+          ctx.fillStyle = "#111";
+          ctx.font = "12px system-ui";
+          if (icon) {
+            // small corner memo if icon exists
+            ctx.textAlign = "left";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(text, OFFSET + x*CELL + 2, OFFSET + y*CELL + CELL - 2);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+          } else {
+            ctx.fillText(text, cx, cy);
+          }
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function draw() {
+    drawBackground();
+
+    // layers: fill -> grid -> walls -> icons/text
+    drawCells();
+    drawGrid();
+    drawWalls();
+    drawIconsAndText();
+  }
+
+  // ===== Pointer interactions =====
+  let isPointerDown = false;
+  let lastGridPt = null;
+
+  function getCanvasPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (canvas.width / r.width);
+    const y = (e.clientY - r.top) * (canvas.height / r.height);
+    return {x, y};
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    isPointerDown = true;
+
+    const {x,y} = getCanvasPos(e);
+
+    if (currentTool === Tool.WALL || currentTool === Tool.ERASE_WALL) {
+      const p = canvasToGridPoint(x,y);
+      lastGridPt = p;
+      pushHistory();
+    } else if (currentTool === Tool.FILL || currentTool === Tool.ERASE_FILL) {
+      pushHistory();
+      const c = canvasToCell(x,y);
+      const next = (currentTool === Tool.FILL) ? selectedColor : null;
+
+      if (e.shiftKey) {
+        bucketFillByWalls(c.x, c.y, next);
+      } else {
+        state.cells[c.y][c.x] = next;
+      }
+
+      stampUpdated();
+      draw();
+    } else if (currentTool === Tool.ICON || currentTool === Tool.ERASE_ICON) {
+      pushHistory();
+      const c = canvasToCell(x,y);
+      if (currentTool === Tool.ICON) {
+        state.iconMap[c.y][c.x] = { type: iconTypeSel.value, note: (iconNoteInput.value || "").trim() };
+      } else {
+        state.iconMap[c.y][c.x] = null;
+      }
+      stampUpdated();
+      draw();
+    } else if (currentTool === Tool.TEXT) {
+      pushHistory();
+      const c = canvasToCell(x,y);
+      const current = state.textMap[c.y][c.x] || "";
+      const next = prompt("セル文字（短め推奨）", current);
+      if (next !== null) {
+        state.textMap[c.y][c.x] = String(next).slice(0, 24);
+        stampUpdated();
+        draw();
+      }
+    }
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!isPointerDown) return;
+    if (!(currentTool === Tool.WALL || currentTool === Tool.ERASE_WALL)) return;
+
+    const {x,y} = getCanvasPos(e);
+    const p = canvasToGridPoint(x,y);
+
+    if (!lastGridPt) { lastGridPt = p; return; }
+    if (p.x === lastGridPt.x && p.y === lastGridPt.y) return;
+
+    const val = (currentTool === Tool.WALL) ? selectedWallColor : null;
+    applyWallPath(lastGridPt, p, val);
+    lastGridPt = p;
+
+    stampUpdated(false);
+    draw();
+  });
+
+  canvas.addEventListener("pointerup", (e) => {
+    isPointerDown = false;
+    lastGridPt = null;
+    try { canvas.releasePointerCapture(e.pointerId); } catch {}
+  });
+  canvas.addEventListener("pointercancel", () => {
+    isPointerDown = false;
+    lastGridPt = null;
+  });
+
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // ===== Title binding =====
+  function syncTitleUI() {
+    mapTitleInput.value = state.meta?.title ?? "";
+  }
+
+  let titleDebounce = null;
+  mapTitleInput.addEventListener("input", () => {
+    const v = mapTitleInput.value;
+    // Undo履歴は増やさず、一定時間でstateへ反映
+    clearTimeout(titleDebounce);
+    titleDebounce = setTimeout(() => {
+      state.meta = state.meta || {};
+      state.meta.title = v.trim() || "Dungeon Map";
+      stampUpdated();
+    }, 150);
+  });
+
+  function stampUpdated(saveNow=true) {
+    state.meta = state.meta || {};
+    state.meta.updatedAt = new Date().toISOString();
+    autosave(saveNow);
+  }
+
+  // ===== Buttons =====
+  undoBtn.onclick = undo;
+  redoBtn.onclick = redo;
+
+  clearBtn.onclick = () => {
+    if (!confirm("全消去します。よろしい？")) return;
+    pushHistory();
+    state = emptyState();
+    syncTitleUI();
+    autosave(true);
+    draw();
+  };
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  saveJsonBtn.onclick = () => {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type:"application/json"});
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    downloadBlob(blob, `dungeon_map_${ts}.json`);
+  };
+
+  function normalizeLoaded(obj) {
+    // 旧版boolean壁を吸収（true->黒、false->null）
+    if (!obj) return obj;
+
+    if (Array.isArray(obj.wallsH)) {
+      for (let y=0;y<obj.wallsH.length;y++){
+        for (let x=0;x<obj.wallsH[y].length;x++){
+          const v = obj.wallsH[y][x];
+          if (v === true) obj.wallsH[y][x] = "#111111";
+          else if (v === false) obj.wallsH[y][x] = null;
+        }
+      }
+    }
+    if (Array.isArray(obj.wallsV)) {
+      for (let y=0;y<obj.wallsV.length;y++){
+        for (let x=0;x<obj.wallsV[y].length;x++){
+          const v = obj.wallsV[y][x];
+          if (v === true) obj.wallsV[y][x] = "#111111";
+          else if (v === false) obj.wallsV[y][x] = null;
+        }
+      }
+    }
+
+    obj.meta = obj.meta || {};
+    obj.meta.title = (obj.meta.title || "Dungeon Map");
+    obj.meta.updatedAt = new Date().toISOString();
+    obj.version = obj.version || 2;
+    obj.grid = GRID;
+    obj.cellSize = CELL;
+    obj.marginCells = MARGIN_CELLS;
+    return obj;
+  }
+
+  loadJsonInput.addEventListener("change", async () => {
+    const file = loadJsonInput.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const obj = normalizeLoaded(JSON.parse(text));
+
+      if (!obj || obj.grid !== GRID) {
+        alert("このJSONはグリッドサイズが一致しません。");
+        return;
+      }
+      pushHistory();
+      state = obj;
+      syncTitleUI();
+      autosave(true);
+      draw();
+    } catch (err) {
+      console.error(err);
+      alert("JSON読込に失敗しました。");
+    } finally {
+      loadJsonInput.value = "";
+    }
+  });
+
+exportPngBtn.onclick = () => {
+  draw();
+
+  const title = String((state.meta?.title ?? mapTitleInput.value ?? "Dungeon Map") || "").trim();
+  const headerH = title ? 44 : 0;
+
+  // タイトル付きでPNGを書き出し（キャンバス表示自体は変えない）
+  const out = document.createElement("canvas");
+  out.width = canvas.width;
+  out.height = canvas.height + headerH;
+  const octx = out.getContext("2d");
+
+  // background
+  octx.fillStyle = "#fff";
+  octx.fillRect(0, 0, out.width, out.height);
+
+  // title header
+  if (headerH) {
+    octx.fillStyle = "#111";
+    octx.font = "20px system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif";
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    octx.fillText(title, out.width / 2, headerH / 2);
+
+    octx.strokeStyle = "#e5e7eb";
+    octx.lineWidth = 1;
+    octx.beginPath();
+    octx.moveTo(20, headerH - 0.5);
+    octx.lineTo(out.width - 20, headerH - 0.5);
+    octx.stroke();
+  }
+
+  octx.drawImage(canvas, 0, headerH);
+
+  out.toBlob((blob) => {
+    if (!blob) return;
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    downloadBlob(blob, `dungeon_map_${ts}.png`);
+  }, "image/png");
+};
+
+  // ★ 印刷（ポップアップなし：iframe方式）
+  printBtn.onclick = () => {
+    draw();
+    const dataUrl = canvas.toDataURL("image/png");
+
+    const old = document.getElementById("printFrame");
+    if (old) old.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "printFrame";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+
+    const title = escapeHtml(state.meta?.title || "Dungeon Map");
+    const now = new Date().toLocaleString();
+
+    doc.open();
+    doc.write(`
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${title}</title>
+        <style>
+          @page { margin: 12mm; }
+          body { margin: 0; font-family: system-ui, sans-serif; }
+          h1 { margin: 0 0 6mm; font-size: 18px; text-align: center; }
+          .wrap { padding: 10mm; }
+          .imgWrap { display:flex; justify-content:center; }
+          img { max-width: 100%; height: auto; }
+          .meta { text-align:center; color:#444; font-size:12px; margin-top:5mm; }
+        </style>
+      </head>
+      <body>
+        <div class="wrap">
+          <h1>${title}</h1>
+          <div class="imgWrap">
+            <img id="pimg" src="${dataUrl}" alt="Dungeon Map" />
+          </div>
+          <div class="meta">${title} / ${now}</div>
+        </div>
+        <script>
+          const img = document.getElementById('pimg');
+          img.onload = () => {
+            setTimeout(() => {
+              window.focus();
+              window.print();
+            }, 80);
+          };
+        <\/script>
+      </body>
+      </html>
+    `);
+    doc.close();
+  };
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // ===== Keyboard shortcuts =====
+window.addEventListener("keydown", (e) => {
+  // 入力中はショートカット誤爆を避ける（Ctrl系も含め基本ブラウザに任せる）
+  const t = e.target;
+  const tag = (t?.tagName || "").toLowerCase();
+  const isTyping = tag === "input" || tag === "textarea" || tag === "select" || t?.isContentEditable;
+  if (isTyping) return;
+
+  // Undo / Redo
+  const z = (e.key === "z" || e.key === "Z");
+  const y = (e.key === "y" || e.key === "Y");
+  if (e.ctrlKey && z && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey && (y || (z && e.shiftKey))) { e.preventDefault(); redo(); return; }
+
+  // Ctrl/Alt/Meta 併用は OS/ブラウザ側ショートカットを優先
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // 壁色ショートカット（1/2/3）
+  if (e.key === "1" || e.key === "2" || e.key === "3") {
+    const idx = parseInt(e.key, 10) - 1;
+    selectedWallColor = WALL_COLORS[idx] || selectedWallColor;
+    renderWallSwatches();
+    return;
+  }
+
+  // ツール切替
+  const k = e.key.toLowerCase();
+  if (k === "w") setTool(Tool.WALL);
+  else if (k === "e") setTool(Tool.ERASE_WALL);
+  else if (k === "f") setTool(Tool.FILL);
+  else if (k === "d") setTool(Tool.ERASE_FILL);
+  else if (k === "i") setTool(Tool.ICON);
+  else if (k === "o") setTool(Tool.ERASE_ICON);
+  else if (k === "t") setTool(Tool.TEXT);
+});
+
+// ===== Autosave =====
+  const LS_KEY = "dungeon_mapper_27x27_v2_margin1";
+  function autosave(force=false) {
+    if (!force) {
+      if (autosave._t) return;
+      autosave._t = setTimeout(() => {
+        autosave._t = null;
+        try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch {}
+      }, 250);
+    } else {
+      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch {}
+    }
+  }
+
+  function autoload() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const obj = normalizeLoaded(JSON.parse(raw));
+      if (obj && obj.grid === GRID) state = obj;
+    } catch {}
+  }
+
+  // ===== Init =====
+  // enforce canvas size (safety)
+  canvas.width = CANVAS_PX;
+  canvas.height = CANVAS_PX;
+
+  autoload();
+  syncTitleUI();
+  updateHistoryButtons();
+  draw();
+
+})();
+</script>
+
+</body>
+</html>
