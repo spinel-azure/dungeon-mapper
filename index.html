@@ -158,6 +158,7 @@
     <button id="toolEraseWall" title="壁線を消す">壁消し</button>
     <button id="toolFill" title="セルを塗る">塗り</button>
     <button id="toolEraseFill" title="塗りを消す">塗消し</button>
+    <button id="bucketToggle" title="塗り/塗消しの範囲(バケツ)。スマホはこれをON">範囲</button>
     <button id="toolIcon" title="絵文字アイコンを置く">アイコン</button>
     <button id="toolEraseIcon" title="アイコンを消す">アイ消し</button>
     <button id="toolText" title="セルに短いメモ文字を入れる">文字</button>
@@ -229,7 +230,7 @@
     <strong>操作メモ</strong>
     <ul style="margin:8px 0 0; padding-left:18px;">
       <li><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。</li>
-      <li><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリックで壁に区切られた範囲を塗りつぶし。</li>
+      <li><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリック（PC）または <span class="kbd">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。</li>
       <li><b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。</li>
       <li><b>文字</b>：セルをクリック→入力→OKで確定。</li>
       <li>Undo/Redo：<span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> / <span class="kbd">Ctrl+Shift+Z</span></li>
@@ -291,6 +292,9 @@ const WALL_COLORS = [
     eraseIcon: document.getElementById("toolEraseIcon"),
     text: document.getElementById("toolText"),
   };
+
+  const bucketToggleBtn = document.getElementById("bucketToggle");
+  let bucketMode = false;
 
   const wallWidthInput = document.getElementById("wallWidth");
   const iconTypeSel = document.getElementById("iconType");
@@ -394,6 +398,15 @@ const WALL_COLORS = [
   toolButtons.icon.onclick = () => setTool(Tool.ICON);
   toolButtons.eraseIcon.onclick = () => setTool(Tool.ERASE_ICON);
   toolButtons.text.onclick = () => setTool(Tool.TEXT);
+
+
+  // ===== Bucket toggle (for touch devices) =====
+  if (bucketToggleBtn) {
+    bucketToggleBtn.onclick = () => {
+      bucketMode = !bucketMode;
+      bucketToggleBtn.classList.toggle("active", bucketMode);
+    };
+  }
 
   // ===== Palette UI =====
   let selectedColor = PALETTE[4]; // default yellow
@@ -702,7 +715,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
       const c = canvasToCell(x,y);
       const next = (currentTool === Tool.FILL) ? selectedColor : null;
 
-      if (e.shiftKey) {
+      if (e.shiftKey || bucketMode) {
         bucketFillByWalls(c.x, c.y, next);
       } else {
         state.cells[c.y][c.x] = next;
