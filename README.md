@@ -1,2 +1,69 @@
 # dungeon-mapper
-Wizardry Variants Daphne mapping tool
+
+Wizardry Variants Daphne 用の  
+ブラウザベース・ダンジョンマッピング支援ツールです。
+
+## 🔗 公開URL
+https://spinel-azure.github.io/dungeon-mapper/
+
+## 🧭 概要
+本ツールは、Wizardry Variants Daphne のダンジョン探索時に  
+手動でマップを記録・管理するための補助ツールです。
+
+- ブラウザ上で動作（インストール不要）
+- PC / スマホ対応
+- データはローカル環境で完結（サーバー保存なし）
+
+## 🖱️ 使い方（簡易）
+1. 上記URLにアクセス
+2. マスをクリックして床・壁・アイコンを配置
+3. 必要に応じて修正・上書き
+
+※ 詳細な操作は画面表示に従ってください。
+
+## ⚠️ 注意事項
+- 本ツールは **非公式のファンメイドツール** です
+- ゲーム本体・運営とは一切関係ありません
+- ブラウザのデータ削除を行うと保存内容が消える場合があります
+
+## 🛠️ バージョン
+- v2b（現在公開中）
+
+## 📄 ライセンス
+個人利用向けに公開しています。  
+再配布・改変については常識の範囲でお願いします。
+
+# dungeon-mapper
+
+A browser-based dungeon mapping support tool  
+for **Wizardry Variants Daphne**.
+
+## 🔗 Live Demo
+https://spinel-azure.github.io/dungeon-mapper/
+
+## 🧭 Overview
+This tool is designed to help players manually record and manage dungeon maps  
+while exploring dungeons in *Wizardry Variants Daphne*.
+
+- Runs entirely in the browser (no installation required)
+- Works on both PC and mobile devices
+- All data is stored locally in your browser (no server-side storage)
+
+## 🖱️ How to Use (Quick Guide)
+1. Open the URL above
+2. Click on tiles to place floors, walls, and icons
+3. Edit or overwrite tiles as needed while exploring
+
+※ For detailed controls, please refer to the on-screen UI.
+
+## ⚠️ Notes
+- This is an **unofficial fan-made tool**
+- It is not affiliated with or endorsed by the game or its developers
+- Clearing your browser data may remove saved maps
+
+## 🛠️ Version
+- v2b (currently released)
+
+## 📄 License
+This tool is published for personal use.  
+Redistribution or modification is allowed within reasonable and respectful limits.
