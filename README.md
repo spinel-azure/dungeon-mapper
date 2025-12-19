@@ -68,8 +68,14 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 This tool is published for personal use.  
 Redistribution or modification is allowed within reasonable and respectful limits.
 
-## 📝 更新履歴 / Changelog
+## 📝 Changelog / 更新履歴
+
+### v2c (2025-12-20)
+- スマートフォン／タブレットでの塗りつぶし操作に対応  
+  Added fill support for mobile and tablet devices
 
 ### v2b (2025-12-19)
-- 公開 / Initial public release
+- 初回公開版  
+  Initial public release
+
 
