@@ -70,6 +70,10 @@ Redistribution or modification is allowed within reasonable and respectful limit
 
 ## 📝 Changelog / 更新履歴
 
+### v2d　(2025-12-20)
+グリッドの下部（X軸）と左側（Y軸）に0〜26の座標ラベルを表示。タップしたセルの座標（X:00 Y:00）を表示。選択中セルを黄色枠でハイライト。
+Added coordinate labels (0–26) on the bottom (X-axis) and left (Y-axis). Displays the tapped cell coordinates (X:00 Y:00). Highlights the selected cell with a yellow outline.
+
 ### v2c (2025-12-20)
 - スマートフォン／タブレットでの塗りつぶし操作に対応  
   Added fill support for mobile and tablet devices
