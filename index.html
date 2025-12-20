@@ -132,6 +132,20 @@
       box-shadow: 0 1px 0 rgba(0,0,0,.02);
     }
 
+    #canvasStack{
+      position:relative;
+      width:580px;
+      height:580px;
+    }
+    #overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:transparent; /* override global canvas background */
+      box-shadow:none;        /* overlay should not cast shadow */
+      border-radius:10px;
+    }
+
     .hint{
       font-size:12px;
       color:var(--muted);
@@ -147,6 +161,25 @@
       font-size: 12px;
       color:#111;
     }
+
+    #coordRow{
+      display:flex;
+      justify-content:flex-end;
+      margin-top:8px;
+    }
+    #coordDisplay{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      color:var(--muted);
+      background:var(--ui);
+      border:1px solid var(--ui2);
+      border-radius:10px;
+      padding:4px 8px;
+      min-width:92px;
+      text-align:right;
+      user-select:none;
+    }
+
   </style>
 </head>
 <body>
@@ -223,7 +256,11 @@
       <input id="mapTitle" type="text" placeholder="MAP名を入力（印刷にも反映）" />
     </div>
     <!-- ★ 29x29（1マス余白）: 580x580 -->
-    <canvas id="map" width="580" height="580"></canvas>
+    <div id="canvasStack">
+      <canvas id="map" width="580" height="580"></canvas>
+      <canvas id="overlay" width="580" height="580"></canvas>
+    </div>
+    <div id="coordRow"><div id="coordDisplay">X:-- Y:--</div></div>
   </div>
 
   <div class="panel hint">
@@ -279,9 +316,15 @@ const WALL_COLORS = [
   // ===== DOM =====
   const canvas = document.getElementById("map");
   const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const octx = overlay.getContext("2d");
+  // Keep overlay canvas in sync with the main canvas size
+  overlay.width = canvas.width;
+  overlay.height = canvas.height;
   const swatchesEl = document.getElementById("swatches");
   const wallSwatchesEl = document.getElementById("wallSwatches");
   const mapTitleInput = document.getElementById("mapTitle");
+  const coordDisplayEl = document.getElementById("coordDisplay");
 
   const toolButtons = {
     wall: document.getElementById("toolWall"),
@@ -442,6 +485,12 @@ const WALL_COLORS = [
   // ===== Helpers =====
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
+  function setCoordDisplay(x, y) {
+    if (!coordDisplayEl) return;
+    const pad2 = (n) => String(n).padStart(2, "0");
+    coordDisplayEl.textContent = `X:${pad2(x)} Y:${pad2(y)}`;
+  }
+
   function toLocal(px, py) {
     // ★ グリッド領域に対する座標（余白を除外）
     const lx = clamp(px - OFFSET, 0, GRID_PX);
@@ -595,6 +644,32 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     ctx.restore();
   }
 
+  // Axis labels (0..26) shown in the margin row/column
+  function drawAxes() {
+    ctx.save();
+    ctx.fillStyle = "#6b7280"; // muted gray
+    ctx.font = "11px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // X axis: bottom margin row
+    const yBottom = OFFSET + GRID_PX + CELL / 2;
+    for (let x = 0; x < GRID; x++) {
+      const cx = OFFSET + x * CELL + CELL / 2;
+      ctx.fillText(String(x), cx, yBottom);
+    }
+
+    // Y axis: left margin column
+    const xLeft = OFFSET - CELL / 2;
+    for (let y = 0; y < GRID; y++) {
+      const cy = OFFSET + y * CELL + CELL / 2;
+      // Origin is bottom-left for displayed coordinates: (0,0) at the lower-left cell
+      ctx.fillText(String(GRID - 1 - y), xLeft, cy);
+    }
+
+    ctx.restore();
+  }
+
   function drawWalls() {
     const w = clamp(parseInt(wallWidthInput.value || "4",10), 2, 10);
     ctx.save();
@@ -685,6 +760,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     // layers: fill -> grid -> walls -> icons/text
     drawCells();
     drawGrid();
+    drawAxes();
     drawWalls();
     drawIconsAndText();
   }
@@ -700,11 +776,62 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     return {x, y};
   }
 
+  function inGridArea(px, py) {
+    return (px >= OFFSET && px <= OFFSET + GRID_PX && py >= OFFSET && py <= OFFSET + GRID_PX);
+  }
+
+  // ===== Selection overlay (UI only; not saved / not exported) =====
+  let selectedCell = null; // {x,y} in array coordinates (0,0 is top-left)
+
+  function clearOverlay() {
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+  }
+
+  function drawSelectionOverlay() {
+    clearOverlay();
+    if (!selectedCell) return;
+
+    const x0 = OFFSET + selectedCell.x * CELL;
+    const y0 = OFFSET + selectedCell.y * CELL;
+
+    // Outer yellow frame (2px) — kept inside the cell for crispness
+    octx.save();
+    octx.lineWidth = 2;
+    octx.strokeStyle = "#FFFF00";
+    octx.strokeRect(x0 + 1, y0 + 1, CELL - 2, CELL - 2);
+
+    // Inner dark line (1px) for contrast on yellow-filled cells
+    octx.lineWidth = 1;
+    octx.strokeStyle = "rgba(0,0,0,0.65)";
+    // 0.5 offset for crisp 1px stroke
+    octx.strokeRect(x0 + 2.5, y0 + 2.5, CELL - 5, CELL - 5);
+
+    octx.restore();
+  }
+
+
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
     isPointerDown = true;
 
     const {x,y} = getCanvasPos(e);
+
+    // Ignore interactions on the margin area (where axis labels live)
+    if (!inGridArea(x, y)) {
+      isPointerDown = false;
+      lastGridPt = null;
+      return;
+    }
+
+
+    // Show tapped cell coordinate
+    const cc = canvasToCell(x, y);
+    // Display coordinates with origin at bottom-left
+    setCoordDisplay(cc.x, GRID - 1 - cc.y);
+
+    // Update selection highlight (UI overlay only)
+    selectedCell = cc;
+    drawSelectionOverlay();
 
     if (currentTool === Tool.WALL || currentTool === Tool.ERASE_WALL) {
       const p = canvasToGridPoint(x,y);
@@ -966,7 +1093,26 @@ exportPngBtn.onclick = () => {
           .imgWrap { display:flex; justify-content:center; }
           img { max-width: 100%; height: auto; }
           .meta { text-align:center; color:#444; font-size:12px; margin-top:5mm; }
-        </style>
+      
+    #coordRow{
+      display:flex;
+      justify-content:flex-end;
+      margin-top:8px;
+    }
+    #coordDisplay{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      color:var(--muted);
+      background:var(--ui);
+      border:1px solid var(--ui2);
+      border-radius:10px;
+      padding:4px 8px;
+      min-width:92px;
+      text-align:right;
+      user-select:none;
+    }
+
+  </style>
       </head>
       <body>
         <div class="wrap">
