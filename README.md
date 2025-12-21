@@ -27,7 +27,7 @@ https://spinel-azure.github.io/dungeon-mapper/
 - ブラウザのデータ削除を行うと保存内容が消える場合があります
 
 ## 🛠️ バージョン
-- v2d（現在公開中）
+- v2e（現在公開中）
 
 ## 📄 ライセンス
 個人利用向けに公開しています。  
@@ -62,13 +62,17 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 - Clearing your browser data may remove saved maps
 
 ## 🛠️ Version
-- v2d
+- v2e
 
 ## 📄 License
 This tool is published for personal use.  
 Redistribution or modification is allowed within reasonable and respectful limits.
 
 ## 📝 Changelog / 更新履歴
+
+### v2e(2025-12-22)
+- 日本語／英語の表示切り替え（Languageプルダウン）に対応。操作メモの説明文を整理（不要な注記を削除）。
+Added Japanese/English UI switching via a Language dropdown. Cleaned up the Operation Notes text (removed unnecessary notes).
 
 ### v2d (2025-12-20)
 - グリッドの下部（X軸）と左側（Y軸）に0〜26の座標ラベルを表示。タップしたセルの座標（X:00 Y:00）を表示。選択中セルを黄色枠でハイライト。
