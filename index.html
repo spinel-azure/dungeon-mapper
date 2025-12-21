@@ -132,21 +132,24 @@
       box-shadow: 0 1px 0 rgba(0,0,0,.02);
     }
 
+    
+
     #canvasStack{
       position:relative;
       width:580px;
       height:580px;
     }
-    #overlay{
+    #canvasStack canvas{
       position:absolute;
-      inset:0;
+      left:0; top:0;
+    }
+    #overlay{
+      background:transparent;
       pointer-events:none;
-      background:transparent; /* override global canvas background */
-      box-shadow:none;        /* overlay should not cast shadow */
-      border-radius:10px;
+      box-shadow:none;
     }
 
-    .hint{
+.hint{
       font-size:12px;
       color:var(--muted);
       line-height:1.5;
@@ -186,7 +189,7 @@
 
 <header>
   <div class="group">
-    <span class="label">ツール</span>
+    <span class="label" id="lblTools">ツール</span>
     <button id="toolWall" class="active" title="格子の辺に壁線を引く">壁線</button>
     <button id="toolEraseWall" title="壁線を消す">壁消し</button>
     <button id="toolFill" title="セルを塗る">塗り</button>
@@ -197,23 +200,31 @@
     <button id="toolText" title="セルに短いメモ文字を入れる">文字</button>
   </div>
 
+  <div class="group" id="langGroup">
+    <span class="label">言語 / Language</span>
+    <select id="langSelect" title="UI language">
+      <option value="ja">Japanese</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+
   <div class="group">
-    <span class="label">塗り色</span>
+    <span class="label" id="lblFillColor">塗り色</span>
     <div class="swatches" id="swatches"></div>
 
     <span class="sep"></span>
 
-    <span class="label">壁色</span>
+    <span class="label" id="lblWallColor">壁色</span>
     <div class="swatches wallSwatches" id="wallSwatches"></div>
 
     <span class="sep"></span>
 
-    <span class="label">線幅</span>
+    <span class="label" id="lblLineWidth">線幅</span>
     <input id="wallWidth" type="number" min="2" max="10" value="4" style="width:72px" />
   </div>
 
   <div class="group">
-    <span class="label">アイコン</span>
+    <span class="label" id="lblIcons">アイコン</span>
     <select id="iconType">
 <option value="🚪">🚪 Stairs</option>
 <option value="✨">✨ Haken</option>
@@ -221,7 +232,7 @@
 <option value="❗">❗ Event</option>
 <option value="⛲">⛲ Fountain</option>
 <option value="☠">☠ Remains</option>
-<option value="🕳">🕳 Pit</option>
+<option value="🕳">🕳 Pitfall</option>
 <option value="♨">♨ Heal</option>
 <option value="🧰">🧰 Treasure</option>
 <option value="👤">👤 NPC</option>
@@ -232,18 +243,18 @@
   </div>
 
   <div class="group">
-    <span class="label">履歴</span>
+    <span class="label" id="lblHistory">履歴</span>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">Redo</button>
     <button id="clearBtn" class="danger" title="全消去">全消去</button>
   </div>
 
   <div class="group">
-    <span class="label">保存/出力</span>
+    <span class="label" id="lblSaveExport">保存/出力</span>
     <button id="saveJsonBtn">JSON保存</button>
     <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
       <input id="loadJsonInput" type="file" accept="application/json" style="display:none" />
-      <span style="padding:6px 10px;border:1px solid var(--ui2);border-radius:10px;background:#fff;">JSON読込</span>
+      <span id="loadJsonSpan" style="padding:6px 10px;border:1px solid var(--ui2);border-radius:10px;background:#fff;">JSON読込</span>
     </label>
     <button id="exportPngBtn">PNG書出</button>
     <button id="printBtn">印刷</button>
@@ -264,21 +275,17 @@
   </div>
 
   <div class="panel hint">
-    <strong>操作メモ</strong>
+    <strong id="opMemoTitle">操作メモ</strong>
     <ul style="margin:8px 0 0; padding-left:18px;">
-      <li><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。</li>
-      <li><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリック（PC）または <span class="kbd">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。</li>
-      <li><b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。</li>
-      <li><b>文字</b>：セルをクリック→入力→OKで確定。</li>
-      <li>Undo/Redo：<span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> / <span class="kbd">Ctrl+Shift+Z</span></li>
-      <li>ショートカット：<span class="kbd">W</span>壁線 / <span class="kbd">E</span>壁消し / <span class="kbd">F</span>塗り / <span class="kbd">D</span>塗消し / <span class="kbd">I</span>アイコン / <span class="kbd">O</span>アイ消し / <span class="kbd">T</span>文字 / 壁色 <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span></li>
-      <li>自動保存：このブラウザ内に自動保存（localStorage）。</li>
+      <li id="memoWall"><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。</li>
+      <li id="memoFill"><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリック（PC）または <span class="kbd">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。</li>
+      <li id="memoIcon"><b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。</li>
+      <li id="memoText"><b>文字</b>：セルをクリック→入力→OKで確定。</li>
+      <li id="memoUndo">Undo/Redo：<span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> / <span class="kbd">Ctrl+Shift+Z</span></li>
+      <li id="memoShortcut">ショートカット：<span class="kbd">W</span>壁線 / <span class="kbd">E</span>壁消し / <span class="kbd">F</span>塗り / <span class="kbd">D</span>塗消し / <span class="kbd">I</span>アイコン / <span class="kbd">O</span>アイ消し / <span class="kbd">T</span>文字 / 壁色 <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span></li>
+      <li id="memoAutosave">自動保存：このブラウザ内に自動保存（localStorage）。</li>
     </ul>
-    <hr style="border:none;border-top:1px solid var(--ui2);margin:10px 0;">
-    <div style="font-size:12px;color:var(--muted);">
-      ※ 27×27セル。周囲に1マス余白（線の見切れ防止）。壁線は水平/垂直のみ。斜め移動は自動でどちらかに寄せる（ブレ防止）。
-    </div>
-  </div>
+</div>
 </main>
 
 <script>
@@ -318,13 +325,27 @@ const WALL_COLORS = [
   const ctx = canvas.getContext("2d");
   const overlay = document.getElementById("overlay");
   const octx = overlay.getContext("2d");
-  // Keep overlay canvas in sync with the main canvas size
-  overlay.width = canvas.width;
-  overlay.height = canvas.height;
   const swatchesEl = document.getElementById("swatches");
   const wallSwatchesEl = document.getElementById("wallSwatches");
   const mapTitleInput = document.getElementById("mapTitle");
   const coordDisplayEl = document.getElementById("coordDisplay");
+  const langSelect = document.getElementById("langSelect");
+  const loadJsonSpan = document.getElementById("loadJsonSpan");
+  const lblTools = document.getElementById("lblTools");
+  const lblFillColor = document.getElementById("lblFillColor");
+  const lblWallColor = document.getElementById("lblWallColor");
+  const lblLineWidth = document.getElementById("lblLineWidth");
+  const lblIcons = document.getElementById("lblIcons");
+  const lblHistory = document.getElementById("lblHistory");
+  const lblSaveExport = document.getElementById("lblSaveExport");
+  const opMemoTitle = document.getElementById("opMemoTitle");
+  const memoWall = document.getElementById("memoWall");
+  const memoFill = document.getElementById("memoFill");
+  const memoIcon = document.getElementById("memoIcon");
+  const memoText = document.getElementById("memoText");
+  const memoUndo = document.getElementById("memoUndo");
+  const memoShortcut = document.getElementById("memoShortcut");
+  const memoAutosave = document.getElementById("memoAutosave");
 
   const toolButtons = {
     wall: document.getElementById("toolWall"),
@@ -339,6 +360,8 @@ const WALL_COLORS = [
   const bucketToggleBtn = document.getElementById("bucketToggle");
   let bucketMode = false;
 
+
+
   const wallWidthInput = document.getElementById("wallWidth");
   const iconTypeSel = document.getElementById("iconType");
   const iconNoteInput = document.getElementById("iconNote");
@@ -350,6 +373,265 @@ const WALL_COLORS = [
   const loadJsonInput = document.getElementById("loadJsonInput");
   const exportPngBtn = document.getElementById("exportPngBtn");
   const printBtn = document.getElementById("printBtn");
+
+  // ===== UI-only state (not saved / not exported) =====
+  let selectedCell = null; // {x,y} in internal (top-left origin) coords
+
+  function drawOverlay() {
+    if (!overlay || !octx) return;
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    if (!selectedCell) return;
+
+    const x = OFFSET + selectedCell.x * CELL;
+    const y = OFFSET + selectedCell.y * CELL;
+
+    // Outer yellow outline (2px)
+    octx.strokeStyle = "#FFFF00";
+    octx.lineWidth = 2;
+    octx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
+
+    // Inner dark outline (1px) for visibility on yellow tiles
+    octx.strokeStyle = "rgba(0,0,0,0.55)";
+    octx.lineWidth = 1;
+    octx.strokeRect(x + 3, y + 3, CELL - 6, CELL - 6);
+  }
+
+  function setSelectedCell(x, y) {
+    selectedCell = { x, y };
+    drawOverlay();
+  }
+
+  function clearSelectedCell() {
+    selectedCell = null;
+    drawOverlay();
+  }
+
+  // ===== i18n =====
+  const ICON_DEFS = [
+    { value: "🚪", ja: "階段", en: "Stairs" },
+    { value: "✨", ja: "ハーケン", en: "Haken" },
+    { value: "👹", ja: "敵", en: "Enemy" },
+    { value: "❗", ja: "イベント", en: "Event" },
+    { value: "⛲", ja: "命の井戸", en: "Fountain" },
+    { value: "☠", ja: "遺骸", en: "Remains" },
+    { value: "🕳", ja: "シュート", en: "Pitfall" },
+    { value: "♨", ja: "回復", en: "Heal" },
+    { value: "🧰", ja: "宝箱", en: "Treasure" },
+    { value: "👤", ja: "NPC", en: "NPC" },
+    { value: "❌", ja: "危険", en: "Danger" },
+    { value: "🔯", ja: "ワープ", en: "Warp" },
+  ];
+
+  const I18N = {
+    ja: {
+      labels: {
+        tools: "ツール",
+        fillColor: "塗り色",
+        wallColor: "壁色",
+        lineWidth: "線幅",
+        icons: "アイコン",
+        history: "履歴",
+        saveExport: "保存/出力",
+        opMemo: "操作メモ",
+      },
+      buttons: {
+        wall: "壁線",
+        eraseWall: "壁消し",
+        fill: "塗り",
+        eraseFill: "塗消し",
+        bucket: "範囲",
+        icon: "アイコン",
+        eraseIcon: "アイ消し",
+        text: "文字",
+        clearAll: "全消去",
+        saveJson: "JSON保存",
+        loadJson: "JSON読込",
+        exportPng: "PNG書出",
+        print: "印刷",
+      },
+      placeholders: {
+        mapTitle: "MAP名を入力（印刷にも反映）",
+        iconNote: "メモ(任意)",
+      },
+      titles: {
+        wall: "格子の辺に壁線を引く",
+        eraseWall: "壁線を消す",
+        fill: "セルを塗る",
+        eraseFill: "塗りを消す",
+        bucket: "塗り/塗消しの範囲(バケツ)。スマホはこれをON",
+        icon: "絵文字アイコンを置く",
+        eraseIcon: "アイコンを消す",
+        text: "セルに短いメモ文字を入れる",
+        undo: "Undo (Ctrl+Z)",
+        redo: "Redo (Ctrl+Y / Ctrl+Shift+Z)",
+        clearAll: "全消去",
+      },
+      memo: {
+        wall: "<b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。",
+        fill: "<b>塗り/塗消し</b>：クリックで1マス。<span class=\"kbd\">Shift</span>+クリック（PC）または <span class=\"kbd\">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。",
+        icon: "<b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。",
+        text: "<b>文字</b>：セルをクリック→入力→OKで確定。",
+        undo: "Undo/Redo：<span class=\"kbd\">Ctrl+Z</span> / <span class=\"kbd\">Ctrl+Y</span> / <span class=\"kbd\">Ctrl+Shift+Z</span>",
+        shortcut: "ショートカット：<span class=\"kbd\">W</span>壁線 / <span class=\"kbd\">E</span>壁消し / <span class=\"kbd\">F</span>塗り / <span class=\"kbd\">D</span>塗消し / <span class=\"kbd\">I</span>アイコン / <span class=\"kbd\">O</span>アイ消し / <span class=\"kbd\">T</span>文字 / 壁色 <span class=\"kbd\">1</span><span class=\"kbd\">2</span><span class=\"kbd\">3</span>",
+        autosave: "自動保存：このブラウザ内に自動保存（localStorage）。",
+      },
+      dialogs: {
+        cellTextPrompt: "セル文字（短め推奨）",
+        clearConfirm: "全消去します。よろしい？",
+        jsonSizeMismatch: "このJSONはグリッドサイズが一致しません。",
+        jsonLoadFail: "JSON読込に失敗しました。",
+      },
+      title: "3D Dungeon Mapping Assist (27x27)",
+    },
+    en: {
+      labels: {
+        tools: "Tools",
+        fillColor: "Fill",
+        wallColor: "Wall",
+        lineWidth: "Width",
+        icons: "Icons",
+        history: "History",
+        saveExport: "Save/Export",
+        opMemo: "How to use",
+      },
+      buttons: {
+        wall: "Wall",
+        eraseWall: "Erase wall",
+        fill: "Fill",
+        eraseFill: "Erase fill",
+        bucket: "Bucket",
+        icon: "Icon",
+        eraseIcon: "Erase icon",
+        text: "Text",
+        clearAll: "Clear all",
+        saveJson: "Save JSON",
+        loadJson: "Load JSON",
+        exportPng: "Export PNG",
+        print: "Print",
+      },
+      placeholders: {
+        mapTitle: "Map title (shown on print/export)",
+        iconNote: "Note (optional)",
+      },
+      titles: {
+        wall: "Draw walls snapped to grid edges",
+        eraseWall: "Erase walls",
+        fill: "Paint a cell",
+        eraseFill: "Erase paint",
+        bucket: "Bucket fill (region by walls). Use this on touch devices",
+        icon: "Place an emoji icon",
+        eraseIcon: "Remove an icon",
+        text: "Add a short text note",
+        undo: "Undo (Ctrl+Z)",
+        redo: "Redo (Ctrl+Y / Ctrl+Shift+Z)",
+        clearAll: "Clear everything",
+      },
+      memo: {
+        wall: "<b>Wall / Erase wall</b>: Drag to draw/erase snapped to grid edges (choose wall color).",
+        fill: "<b>Fill / Erase fill</b>: Click to paint a single cell. Use <span class=\"kbd\">Shift</span>+Click (PC) or turn <span class=\"kbd\">Bucket</span> ON (mobile/tablet) to fill a region bounded by walls.",
+        icon: "<b>Icon / Erase icon</b>: Click a cell to place/remove an icon (note is optional).",
+        text: "<b>Text</b>: Click a cell → enter text → OK.",
+        undo: "Undo/Redo: <span class=\"kbd\">Ctrl+Z</span> / <span class=\"kbd\">Ctrl+Y</span> / <span class=\"kbd\">Ctrl+Shift+Z</span>",
+        shortcut: "Shortcuts: <span class=\"kbd\">W</span>Wall / <span class=\"kbd\">E</span>Erase wall / <span class=\"kbd\">F</span>Fill / <span class=\"kbd\">D</span>Erase fill / <span class=\"kbd\">I</span>Icon / <span class=\"kbd\">O</span>Erase icon / <span class=\"kbd\">T</span>Text / Wall color <span class=\"kbd\">1</span><span class=\"kbd\">2</span><span class=\"kbd\">3</span>",
+        autosave: "Autosave: Saved automatically in this browser (localStorage).",
+      },
+      dialogs: {
+        cellTextPrompt: "Cell text (keep it short)",
+        clearConfirm: "Clear everything. Are you sure?",
+        jsonSizeMismatch: "This JSON file has an incompatible grid size.",
+        jsonLoadFail: "Failed to load JSON.",
+      },
+      title: "3D Dungeon Mapping Assist (27x27)",
+    },
+  };
+
+  let currentLang = "ja";
+
+  function renderIconOptions() {
+    const current = iconTypeSel.value;
+    iconTypeSel.innerHTML = "";
+    const defs = ICON_DEFS;
+    for (const d of defs) {
+      const opt = document.createElement("option");
+      opt.value = d.value;
+      const name = (currentLang === "ja") ? d.ja : d.en;
+      opt.textContent = `${d.value} ${name}`;
+      iconTypeSel.appendChild(opt);
+    }
+    // restore selection if possible
+    iconTypeSel.value = defs.some(d => d.value === current) ? current : defs[0].value;
+  }
+
+  function applyLanguage(lang) {
+    currentLang = (lang === "en") ? "en" : "ja";
+    try { localStorage.setItem("dm_lang", currentLang); } catch {}
+
+    document.documentElement.lang = currentLang;
+    document.title = I18N[currentLang].title;
+
+    // labels
+    if (lblTools) lblTools.textContent = I18N[currentLang].labels.tools;
+    if (lblFillColor) lblFillColor.textContent = I18N[currentLang].labels.fillColor;
+    if (lblWallColor) lblWallColor.textContent = I18N[currentLang].labels.wallColor;
+    if (lblLineWidth) lblLineWidth.textContent = I18N[currentLang].labels.lineWidth;
+    if (lblIcons) lblIcons.textContent = I18N[currentLang].labels.icons;
+    if (lblHistory) lblHistory.textContent = I18N[currentLang].labels.history;
+    if (lblSaveExport) lblSaveExport.textContent = I18N[currentLang].labels.saveExport;
+    if (opMemoTitle) opMemoTitle.textContent = I18N[currentLang].labels.opMemo;
+
+    // buttons
+    toolButtons.wall.textContent = I18N[currentLang].buttons.wall;
+    toolButtons.eraseWall.textContent = I18N[currentLang].buttons.eraseWall;
+    toolButtons.fill.textContent = I18N[currentLang].buttons.fill;
+    toolButtons.eraseFill.textContent = I18N[currentLang].buttons.eraseFill;
+    bucketToggleBtn.textContent = I18N[currentLang].buttons.bucket;
+    toolButtons.icon.textContent = I18N[currentLang].buttons.icon;
+    toolButtons.eraseIcon.textContent = I18N[currentLang].buttons.eraseIcon;
+    toolButtons.text.textContent = I18N[currentLang].buttons.text;
+
+    clearBtn.textContent = I18N[currentLang].buttons.clearAll;
+    saveJsonBtn.textContent = I18N[currentLang].buttons.saveJson;
+    if (loadJsonSpan) loadJsonSpan.textContent = I18N[currentLang].buttons.loadJson;
+    exportPngBtn.textContent = I18N[currentLang].buttons.exportPng;
+    printBtn.textContent = I18N[currentLang].buttons.print;
+
+    // placeholders
+    mapTitleInput.placeholder = I18N[currentLang].placeholders.mapTitle;
+    iconNoteInput.placeholder = I18N[currentLang].placeholders.iconNote;
+
+    // titles/tooltips
+    toolButtons.wall.title = I18N[currentLang].titles.wall;
+    toolButtons.eraseWall.title = I18N[currentLang].titles.eraseWall;
+    toolButtons.fill.title = I18N[currentLang].titles.fill;
+    toolButtons.eraseFill.title = I18N[currentLang].titles.eraseFill;
+    bucketToggleBtn.title = I18N[currentLang].titles.bucket;
+    toolButtons.icon.title = I18N[currentLang].titles.icon;
+    toolButtons.eraseIcon.title = I18N[currentLang].titles.eraseIcon;
+    toolButtons.text.title = I18N[currentLang].titles.text;
+    undoBtn.title = I18N[currentLang].titles.undo;
+    redoBtn.title = I18N[currentLang].titles.redo;
+    clearBtn.title = I18N[currentLang].titles.clearAll;
+
+    // memo text
+    if (memoWall) memoWall.innerHTML = I18N[currentLang].memo.wall;
+    if (memoFill) memoFill.innerHTML = I18N[currentLang].memo.fill;
+    if (memoIcon) memoIcon.innerHTML = I18N[currentLang].memo.icon;
+    if (memoText) memoText.innerHTML = I18N[currentLang].memo.text;
+    if (memoUndo) memoUndo.innerHTML = I18N[currentLang].memo.undo;
+    if (memoShortcut) memoShortcut.innerHTML = I18N[currentLang].memo.shortcut;
+    if (memoAutosave) memoAutosave.innerHTML = I18N[currentLang].memo.autosave;
+
+    renderIconOptions();
+  }
+
+  // init language
+  const savedLang = (() => { try { return localStorage.getItem("dm_lang"); } catch { return null; } })();
+  if (langSelect) {
+    langSelect.value = (savedLang === "en") ? "en" : "ja";
+    langSelect.addEventListener("change", () => applyLanguage(langSelect.value));
+  }
+  applyLanguage((savedLang === "en") ? "en" : "ja");
+
 
   // ===== State (layered) =====
   // cells[y][x] = color string or null
@@ -481,6 +763,7 @@ const WALL_COLORS = [
 
   renderSwatches();
   renderWallSwatches();
+  drawOverlay();
 
   // ===== Helpers =====
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
@@ -780,36 +1063,6 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     return (px >= OFFSET && px <= OFFSET + GRID_PX && py >= OFFSET && py <= OFFSET + GRID_PX);
   }
 
-  // ===== Selection overlay (UI only; not saved / not exported) =====
-  let selectedCell = null; // {x,y} in array coordinates (0,0 is top-left)
-
-  function clearOverlay() {
-    octx.clearRect(0, 0, overlay.width, overlay.height);
-  }
-
-  function drawSelectionOverlay() {
-    clearOverlay();
-    if (!selectedCell) return;
-
-    const x0 = OFFSET + selectedCell.x * CELL;
-    const y0 = OFFSET + selectedCell.y * CELL;
-
-    // Outer yellow frame (2px) — kept inside the cell for crispness
-    octx.save();
-    octx.lineWidth = 2;
-    octx.strokeStyle = "#FFFF00";
-    octx.strokeRect(x0 + 1, y0 + 1, CELL - 2, CELL - 2);
-
-    // Inner dark line (1px) for contrast on yellow-filled cells
-    octx.lineWidth = 1;
-    octx.strokeStyle = "rgba(0,0,0,0.65)";
-    // 0.5 offset for crisp 1px stroke
-    octx.strokeRect(x0 + 2.5, y0 + 2.5, CELL - 5, CELL - 5);
-
-    octx.restore();
-  }
-
-
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
     isPointerDown = true;
@@ -828,10 +1081,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     const cc = canvasToCell(x, y);
     // Display coordinates with origin at bottom-left
     setCoordDisplay(cc.x, GRID - 1 - cc.y);
-
-    // Update selection highlight (UI overlay only)
-    selectedCell = cc;
-    drawSelectionOverlay();
+    setSelectedCell(cc.x, cc.y);
 
     if (currentTool === Tool.WALL || currentTool === Tool.ERASE_WALL) {
       const p = canvasToGridPoint(x,y);
@@ -864,7 +1114,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
       pushHistory();
       const c = canvasToCell(x,y);
       const current = state.textMap[c.y][c.x] || "";
-      const next = prompt("セル文字（短め推奨）", current);
+      const next = prompt(I18N[currentLang].dialogs.cellTextPrompt, current);
       if (next !== null) {
         state.textMap[c.y][c.x] = String(next).slice(0, 24);
         stampUpdated();
@@ -931,7 +1181,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
   redoBtn.onclick = redo;
 
   clearBtn.onclick = () => {
-    if (!confirm("全消去します。よろしい？")) return;
+    if (!confirm(I18N[currentLang].dialogs.clearConfirm)) return;
     pushHistory();
     state = emptyState();
     syncTitleUI();
@@ -998,17 +1248,18 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
       const obj = normalizeLoaded(JSON.parse(text));
 
       if (!obj || obj.grid !== GRID) {
-        alert("このJSONはグリッドサイズが一致しません。");
+        alert(I18N[currentLang].dialogs.jsonSizeMismatch);
         return;
       }
       pushHistory();
       state = obj;
+      clearSelectedCell();
       syncTitleUI();
       autosave(true);
       draw();
     } catch (err) {
       console.error(err);
-      alert("JSON読込に失敗しました。");
+      alert(I18N[currentLang].dialogs.jsonLoadFail);
     } finally {
       loadJsonInput.value = "";
     }
