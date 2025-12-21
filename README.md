@@ -30,8 +30,7 @@ https://spinel-azure.github.io/dungeon-mapper/
 - v2e（現在公開中）
 
 ## 📄 ライセンス
-個人利用向けに公開しています。  
-再配布・改変については常識の範囲でお願いします。
+本ツールは個人利用向けに公開しています。詳細は LICENSE.md を参照してください。
 
 # dungeon-mapper
 
@@ -65,8 +64,8 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 - v2e
 
 ## 📄 License
-This tool is published for personal use.  
-Redistribution or modification is allowed within reasonable and respectful limits.
+This tool is provided for personal use only.
+See LICENSE.md for the full terms.
 
 ## 📝 Changelog / 更新履歴
 
