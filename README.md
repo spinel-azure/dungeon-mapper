@@ -27,7 +27,7 @@ https://spinel-azure.github.io/dungeon-mapper/
 - ブラウザのデータ削除を行うと保存内容が消える場合があります
 
 ## 🛠️ バージョン
-- v2b（現在公開中）
+- v2d（現在公開中）
 
 ## 📄 ライセンス
 個人利用向けに公開しています。  
@@ -62,7 +62,7 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 - Clearing your browser data may remove saved maps
 
 ## 🛠️ Version
-- v2b (currently released)
+- v2d
 
 ## 📄 License
 This tool is published for personal use.  
