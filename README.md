@@ -25,6 +25,7 @@ https://spinel-azure.github.io/dungeon-mapper/
 - 本ツールは **非公式のファンメイドツール** です
 - ゲーム本体・運営とは一切関係ありません
 - ブラウザのデータ削除を行うと保存内容が消える場合があります
+- Wizardry™は（株）ドリコムの商標です。
 
 ## 🛠️ バージョン
 - v2e（現在公開中）
@@ -59,6 +60,7 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 - This is an **unofficial fan-made tool**
 - It is not affiliated with or endorsed by the game or its developers
 - Clearing your browser data may remove saved maps
+- Wizardry™ is a trademark of Drecom Co.,Ltd.
 
 ## 🛠️ Version
 - v2e
