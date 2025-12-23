@@ -69,37 +69,57 @@ while exploring dungeons in *Wizardry Variants Daphne*.
 This tool is provided for personal use only.
 See LICENSE.md for the full terms.
 
-## 📝 Changelog / 更新履歴
+<details>
+<summary>## 📝 Changelog / 更新履歴（クリックで開く）</summary>
 
-v2f (2025-12-23)
-グリッドの下に3行分のテキストボックスを設置。
-最大100文字までメモ書き可能に（印刷/PNG出力にも反映）
-Added a 3-line memo box below the grid (up to 100 characters), included in both Print and PNG export.
-セル選択ハイライト（黄色枠）の 表示/非表示切替ボタン を追加
-（PC/タブレットで線引き時に視認性を確保）
-Added a toggle button to show/hide the selected-cell highlight (yellow outline) for better visibility while drawing walls (PC/tablet).
-切替状態は localStorage に保存（次回起動時も維持）
-The toggle state is saved to localStorage (persists across sessions).
-言語切替（日本語/English）に追従
-Works with the language switch (日本語 / English).
+### v2f (2025-12-23)
+- グリッドの下に3行分のテキストボックスを設置  
+  最大100文字までメモ書き可能に（印刷 / PNG出力にも反映）  
+  Added a 3-line memo box below the grid (up to 100 characters), included in both Print and PNG export.
 
-v2e (2025-12-22)
-日本語／英語の表示切り替え（Languageプルダウン）に対応。
-操作メモの説明文を整理（不要な注記を削除）。
-Added Japanese/English UI switching via a Language dropdown. 
-Cleaned up the Operation Notes text (removed unnecessary notes).
+- セル選択ハイライト（黄色枠）の表示 / 非表示切替ボタンを追加  
+  （PC / タブレットで線引き時に視認性を確保）  
+  Added a toggle button to show/hide the selected-cell highlight (yellow outline) for better visibility while drawing walls (PC/tablet).
 
-v2d (2025-12-20)
-グリッドの下部（X軸）と左側（Y軸）に0〜26の座標ラベルを表示。タップしたセルの座標（X:00 Y:00）を表示。
-選択中セルを黄色枠でハイライト。
-Added coordinate labels (0–26) on the bottom (X-axis) and left (Y-axis). Displays the tapped cell coordinates (X:00 Y:00). 
-Highlights the selected cell with a yellow outline.
+- 切替状態は localStorage に保存（次回起動時も維持）  
+  The toggle state is saved to localStorage (persists across sessions).
 
-v2c (2025-12-20)
-スマートフォン／タブレットでの塗りつぶし操作に対応
-Added fill support for mobile and tablet devices.
+- 言語切替（日本語 / English）に追従  
+  Works with the language switch (日本語 / English).
+
+---
+
+### v2e (2025-12-22)
+- 日本語 / 英語の表示切り替え（Languageプルダウン）に対応  
+  操作メモの説明文を整理（不要な注記を削除）  
+  Added Japanese/English UI switching via a Language dropdown.  
+  Cleaned up the Operation Notes text (removed unnecessary notes).
+
+---
+
+### v2d (2025-12-20)
+- グリッド下部（X軸）と左側（Y軸）に 0〜26 の座標ラベルを表示  
+  タップしたセルの座標（X:00 Y:00）を表示  
+  選択中セルを黄色枠でハイライト  
+  Added coordinate labels (0–26) on the bottom (X-axis) and left (Y-axis).  
+  Displays the tapped cell coordinates (X:00 Y:00).  
+  Highlights the selected cell with a yellow outline.
+
+---
+
+### v2c (2025-12-20)
+- スマートフォン / タブレットでの塗りつぶし操作に対応  
+  Added fill support for mobile and tablet devices.
+
+---
+
+### v2b (2025-12-19)
+- 初回公開版  
+  Initial public release.
+
 
 v2b (2025-12-19)
 初回公開版
 Initial public release.
 
+</details>
