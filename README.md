@@ -70,7 +70,7 @@ This tool is provided for personal use only.
 See LICENSE.md for the full terms.
 
 <details>
-<summary>## 📝 Changelog / 更新履歴（クリックで開く）</summary>
+<summary><strong>## 📝 Changelog / 更新履歴（クリックで開く）</strong></summary>
 
 ### v2f (2025-12-23)
 - グリッドの下に3行分のテキストボックスを設置  
