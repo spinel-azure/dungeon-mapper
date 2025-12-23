@@ -168,7 +168,18 @@
     #coordRow{
       display:flex;
       justify-content:flex-end;
+      align-items:center;
+      gap:6px;
       margin-top:8px;
+    }
+    #highlightToggle{
+      font-size:12px;
+      padding:4px 8px;
+      border-radius:10px;
+      background:var(--ui);
+      border:1px solid var(--ui2);
+      user-select:none;
+      white-space:nowrap;
     }
     #coordDisplay{
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -182,6 +193,46 @@
       text-align:right;
       user-select:none;
     }
+
+  
+    /* Bottom memo (3 lines) */
+    #bottomMemoWrap{
+      width:580px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      align-items:stretch;
+    }
+    #bottomMemoLabel{
+      font-size:12px;
+      color:var(--muted);
+      user-select:none;
+    }
+    .memoHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+    #bottomMemoCounter{
+      font-size:12px;
+      color:var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+    #bottomMemo{
+      width:100%;
+      box-sizing:border-box;
+      border:1px solid var(--ui2);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:13px;
+      line-height:1.35;
+      resize:none;
+      height: calc(1.35em * 3 + 20px);
+      background:#fff;
+    }
+    #bottomMemo::placeholder{ color:#9ca3af; }
 
   </style>
 </head>
@@ -271,7 +322,18 @@
       <canvas id="map" width="580" height="580"></canvas>
       <canvas id="overlay" width="580" height="580"></canvas>
     </div>
-    <div id="coordRow"><div id="coordDisplay">X:-- Y:--</div></div>
+    <div id="coordRow">
+      <button id="highlightToggle" title="選択セルのハイライト表示を切替">ハイライト:ON</button>
+      <div id="coordDisplay">X:-- Y:--</div>
+    </div>
+
+    <div id="bottomMemoWrap">
+      <div class="memoHeader">
+        <div id="bottomMemoLabel">メモ（印刷、PNGにも反映 / 最大100文字まで）</div>
+        <div id="bottomMemoCounter">（残り：100文字）</div>
+      </div>
+      <textarea id="bottomMemo" rows="3" placeholder="ここにメモ（3行）…印刷/PNGにも反映"></textarea>
+    </div>
   </div>
 
   <div class="panel hint">
@@ -299,6 +361,9 @@
   const OFFSET = MARGIN_CELLS * CELL;   // ★ 描画オフセット(px)
   const GRID_PX = GRID * CELL;          // 540
   const CANVAS_PX = (GRID + MARGIN_CELLS*2) * CELL; // 580
+
+  const BOTTOM_MEMO_MAX_CHARS = 100;
+  const BOTTOM_MEMO_MAX_LINES = 3;
 
 // ★ パレット（指定9色）
 const PALETTE = [
@@ -329,6 +394,10 @@ const WALL_COLORS = [
   const wallSwatchesEl = document.getElementById("wallSwatches");
   const mapTitleInput = document.getElementById("mapTitle");
   const coordDisplayEl = document.getElementById("coordDisplay");
+  const highlightToggleBtn = document.getElementById("highlightToggle");
+  const bottomMemoEl = document.getElementById("bottomMemo");
+  const bottomMemoLabelEl = document.getElementById("bottomMemoLabel");
+  const bottomMemoCounterEl = document.getElementById("bottomMemoCounter");
   const langSelect = document.getElementById("langSelect");
   const loadJsonSpan = document.getElementById("loadJsonSpan");
   const lblTools = document.getElementById("lblTools");
@@ -360,6 +429,17 @@ const WALL_COLORS = [
   const bucketToggleBtn = document.getElementById("bucketToggle");
   let bucketMode = false;
 
+  // Highlight toggle (UI only)
+  if (highlightToggleBtn) {
+    highlightToggleBtn.addEventListener("click", () => {
+      showHighlight = !showHighlight;
+      try { localStorage.setItem(HL_KEY, showHighlight ? "1" : "0"); } catch {}
+      updateHighlightButton();
+      drawOverlay();
+    });
+  }
+
+
 
 
   const wallWidthInput = document.getElementById("wallWidth");
@@ -375,12 +455,23 @@ const WALL_COLORS = [
   const printBtn = document.getElementById("printBtn");
 
   // ===== UI-only state (not saved / not exported) =====
+  const HL_KEY = "dm_showHighlight";
+  let showHighlight = (() => {
+    try {
+      const v = localStorage.getItem(HL_KEY);
+      if (v === null) return true;
+      return v === "1";
+    } catch {
+      return true;
+    }
+  })();
+
   let selectedCell = null; // {x,y} in internal (top-left origin) coords
 
   function drawOverlay() {
     if (!overlay || !octx) return;
     octx.clearRect(0, 0, overlay.width, overlay.height);
-    if (!selectedCell) return;
+    if (!showHighlight || !selectedCell) return;
 
     const x = OFFSET + selectedCell.x * CELL;
     const y = OFFSET + selectedCell.y * CELL;
@@ -432,14 +523,18 @@ const WALL_COLORS = [
         icons: "アイコン",
         history: "履歴",
         saveExport: "保存/出力",
-        opMemo: "操作メモ",
+        opMemo: "操作メモ",        bottomMemo: "メモ",
+        bottomMemoFull: "メモ（印刷、PNGにも反映 / 最大100文字まで）",
+        remaining: "残り：{n}文字",
       },
+      misc: { on: "ON", off: "OFF" },
       buttons: {
         wall: "壁線",
         eraseWall: "壁消し",
         fill: "塗り",
         eraseFill: "塗消し",
         bucket: "範囲",
+        highlight: "ハイライト",
         icon: "アイコン",
         eraseIcon: "アイ消し",
         text: "文字",
@@ -452,6 +547,7 @@ const WALL_COLORS = [
       placeholders: {
         mapTitle: "MAP名を入力（印刷にも反映）",
         iconNote: "メモ(任意)",
+        bottomMemo: "ここにメモ（3行）…印刷/PNGにも反映（最大100文字）",
       },
       titles: {
         wall: "格子の辺に壁線を引く",
@@ -459,6 +555,7 @@ const WALL_COLORS = [
         fill: "セルを塗る",
         eraseFill: "塗りを消す",
         bucket: "塗り/塗消しの範囲(バケツ)。スマホはこれをON",
+        highlight: "選択セルのハイライト表示を切替",
         icon: "絵文字アイコンを置く",
         eraseIcon: "アイコンを消す",
         text: "セルに短いメモ文字を入れる",
@@ -492,14 +589,18 @@ const WALL_COLORS = [
         icons: "Icons",
         history: "History",
         saveExport: "Save/Export",
-        opMemo: "How to use",
+        opMemo: "How to use",        bottomMemo: "Notes",
+        bottomMemoFull: "Notes (included in Print & PNG / up to 100 chars)",
+        remaining: "Remaining: {n}",
       },
+      misc: { on: "ON", off: "OFF" },
       buttons: {
         wall: "Wall",
         eraseWall: "Erase wall",
         fill: "Fill",
         eraseFill: "Erase fill",
         bucket: "Bucket",
+        highlight: "Highlight",
         icon: "Icon",
         eraseIcon: "Erase icon",
         text: "Text",
@@ -512,6 +613,7 @@ const WALL_COLORS = [
       placeholders: {
         mapTitle: "Map title (shown on print/export)",
         iconNote: "Note (optional)",
+        bottomMemo: "Notes (3 lines) — included in print/PNG (max 100 chars)",
       },
       titles: {
         wall: "Draw walls snapped to grid edges",
@@ -519,6 +621,7 @@ const WALL_COLORS = [
         fill: "Paint a cell",
         eraseFill: "Erase paint",
         bucket: "Bucket fill (region by walls). Use this on touch devices",
+        highlight: "Toggle highlight of the selected cell",
         icon: "Place an emoji icon",
         eraseIcon: "Remove an icon",
         text: "Add a short text note",
@@ -546,6 +649,15 @@ const WALL_COLORS = [
   };
 
   let currentLang = "ja";
+
+  function updateHighlightButton() {
+    if (!highlightToggleBtn) return;
+    const label = I18N[currentLang].buttons.highlight;
+    const stateText = showHighlight ? I18N[currentLang].misc.on : I18N[currentLang].misc.off;
+    highlightToggleBtn.textContent = `${label}:${stateText}`;
+    highlightToggleBtn.classList.toggle("active", showHighlight);
+  }
+
 
   function renderIconOptions() {
     const current = iconTypeSel.value;
@@ -578,6 +690,8 @@ const WALL_COLORS = [
     if (lblHistory) lblHistory.textContent = I18N[currentLang].labels.history;
     if (lblSaveExport) lblSaveExport.textContent = I18N[currentLang].labels.saveExport;
     if (opMemoTitle) opMemoTitle.textContent = I18N[currentLang].labels.opMemo;
+    if (bottomMemoLabelEl) bottomMemoLabelEl.textContent = I18N[currentLang].labels.bottomMemoFull;
+    updateBottomMemoCounter();
 
     // buttons
     toolButtons.wall.textContent = I18N[currentLang].buttons.wall;
@@ -598,6 +712,7 @@ const WALL_COLORS = [
     // placeholders
     mapTitleInput.placeholder = I18N[currentLang].placeholders.mapTitle;
     iconNoteInput.placeholder = I18N[currentLang].placeholders.iconNote;
+    if (bottomMemoEl) bottomMemoEl.placeholder = I18N[currentLang].placeholders.bottomMemo;
 
     // titles/tooltips
     toolButtons.wall.title = I18N[currentLang].titles.wall;
@@ -611,6 +726,9 @@ const WALL_COLORS = [
     undoBtn.title = I18N[currentLang].titles.undo;
     redoBtn.title = I18N[currentLang].titles.redo;
     clearBtn.title = I18N[currentLang].titles.clearAll;
+
+    if (highlightToggleBtn) highlightToggleBtn.title = I18N[currentLang].titles.highlight;
+    updateHighlightButton();
 
     // memo text
     if (memoWall) memoWall.innerHTML = I18N[currentLang].memo.wall;
@@ -649,7 +767,7 @@ const WALL_COLORS = [
     wallsV: Array.from({length: GRID}, () => Array.from({length: GRID+1}, () => null)),
     iconMap: Array.from({length: GRID}, () => Array.from({length: GRID}, () => null)),
     textMap: Array.from({length: GRID}, () => Array.from({length: GRID}, () => "")),
-    meta: { title: "Dungeon Map", updatedAt: new Date().toISOString() },
+    meta: { title: "Dungeon Map", bottomMemo: "", updatedAt: new Date().toISOString() },
   });
 
   let state = emptyState();
@@ -677,6 +795,7 @@ const WALL_COLORS = [
     redoStack.push(snapshot());
     state = undoStack.pop();
     syncTitleUI();
+    syncBottomMemoUI();
     updateHistoryButtons();
     autosave();
     draw();
@@ -687,6 +806,7 @@ const WALL_COLORS = [
     undoStack.push(snapshot());
     state = redoStack.pop();
     syncTitleUI();
+    syncBottomMemoUI();
     updateHistoryButtons();
     autosave();
     draw();
@@ -1153,9 +1273,60 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
 
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
+
+  function sanitizeBottomMemo(raw){
+    let t = String(raw || "").replace(/\r\n/g, "\n");
+    // limit lines
+    let lines = t.split("\n");
+    if (lines.length > BOTTOM_MEMO_MAX_LINES) lines = lines.slice(0, BOTTOM_MEMO_MAX_LINES);
+    t = lines.join("\n");
+    // limit chars (simple length)
+    if (t.length > BOTTOM_MEMO_MAX_CHARS) t = t.slice(0, BOTTOM_MEMO_MAX_CHARS);
+    // normalize: if only whitespace/newlines, treat as empty
+    if (t.replace(/\n/g, "").trim() === "") return "";
+    return t;
+  }
+
+  function countLines(str){
+    if (str === "") return 1;
+    return String(str).split("\n").length;
+  }
+
+  function updateBottomMemoCounter(){
+    if (!bottomMemoEl || !bottomMemoCounterEl) return;
+    const t = sanitizeBottomMemo(bottomMemoEl.value);
+    const remain = Math.max(0, BOTTOM_MEMO_MAX_CHARS - t.length);
+    const label = I18N[currentLang].labels.remaining.replace("{n}", String(remain));
+    bottomMemoCounterEl.textContent = (currentLang === "ja") ? `（${label}）` : `(${label})`;
+  }
+
+  function commitTitleAndMemoNow(){
+    // Flush debounced updates so Export/Print always reflects latest input
+    try { clearTimeout(titleDebounce); } catch {}
+    try { clearTimeout(memoDebounce); } catch {}
+    state.meta = state.meta || {};
+    const titleNow = String(mapTitleInput.value || "").trim();
+    state.meta.title = titleNow || "Dungeon Map";
+
+    const memoNow = sanitizeBottomMemo(bottomMemoEl ? bottomMemoEl.value : (state.meta.bottomMemo || ""));
+    if (bottomMemoEl && bottomMemoEl.value !== memoNow) bottomMemoEl.value = memoNow;
+    state.meta.bottomMemo = memoNow;
+    stampUpdated(false);
+    updateBottomMemoCounter();
+  }
+
   // ===== Title binding =====
   function syncTitleUI() {
     mapTitleInput.value = state.meta?.title ?? "";
+  }
+
+
+  function syncBottomMemoUI() {
+    if (!bottomMemoEl) return;
+    const v = sanitizeBottomMemo(state.meta?.bottomMemo ?? "");
+    bottomMemoEl.value = v;
+    if (state.meta) state.meta.bottomMemo = v;
+    updateBottomMemoCounter();
   }
 
   let titleDebounce = null;
@@ -1168,6 +1339,26 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
       state.meta.title = v.trim() || "Dungeon Map";
       stampUpdated();
     }, 150);
+  });
+
+  let memoDebounce = null;
+  bottomMemoEl?.addEventListener("input", () => {
+    const sanitized = sanitizeBottomMemo(bottomMemoEl.value);
+    if (bottomMemoEl.value !== sanitized) bottomMemoEl.value = sanitized;
+    updateBottomMemoCounter();
+    clearTimeout(memoDebounce);
+    memoDebounce = setTimeout(() => {
+      state.meta = state.meta || {};
+      state.meta.bottomMemo = sanitizeBottomMemo(bottomMemoEl.value);
+      stampUpdated();
+    }, 150);
+  });
+
+  // Prevent creating more than max lines via Enter (2段構えの1段目)
+  bottomMemoEl?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const lines = countLines(bottomMemoEl.value);
+    if (lines >= BOTTOM_MEMO_MAX_LINES) e.preventDefault();
   });
 
   function stampUpdated(saveNow=true) {
@@ -1185,11 +1376,39 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     pushHistory();
     state = emptyState();
     syncTitleUI();
+    syncBottomMemoUI();
     autosave(true);
     draw();
   };
 
-  function downloadBlob(blob, filename) {
+    function roundRect(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  function wrapTextByChars(ctx, text, maxWidth){
+    const out = [];
+    let line = "";
+    for (const ch of String(text)) {
+      const test = line + ch;
+      if (ctx.measureText(test).width <= maxWidth) {
+        line = test;
+      } else {
+        if (line) out.push(line);
+        line = ch;
+      }
+    }
+    if (line) out.push(line);
+    return out.length ? out : [""];
+  }
+
+function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1232,6 +1451,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
 
     obj.meta = obj.meta || {};
     obj.meta.title = (obj.meta.title || "Dungeon Map");
+    obj.meta.bottomMemo = sanitizeBottomMemo(String(obj.meta.bottomMemo || ""));
     obj.meta.updatedAt = new Date().toISOString();
     obj.version = obj.version || 2;
     obj.grid = GRID;
@@ -1255,6 +1475,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
       state = obj;
       clearSelectedCell();
       syncTitleUI();
+    syncBottomMemoUI();
       autosave(true);
       draw();
     } catch (err) {
@@ -1266,15 +1487,25 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
   });
 
 exportPngBtn.onclick = () => {
+  commitTitleAndMemoNow();
   draw();
 
   const title = String((state.meta?.title ?? mapTitleInput.value ?? "Dungeon Map") || "").trim();
   const headerH = title ? 44 : 0;
 
-  // タイトル付きでPNGを書き出し（キャンバス表示自体は変えない）
+  const notesRaw = String(state.meta?.bottomMemo || "");
+  const notesLabel = (currentLang === "en") ? "Notes" : "メモ";
+
+  const gap = 18;
+  const labelH = 16;
+  const boxPad = 14;
+  const lineH = 16;
+  const boxH = boxPad * 2 + lineH * BOTTOM_MEMO_MAX_LINES;
+
+  // 合成キャンバス（タイトル + MAP + 下部メモ）
   const out = document.createElement("canvas");
   out.width = canvas.width;
-  out.height = canvas.height + headerH;
+  out.height = headerH + canvas.height + gap + labelH + 6 + boxH;
   const octx = out.getContext("2d");
 
   // background
@@ -1297,7 +1528,50 @@ exportPngBtn.onclick = () => {
     octx.stroke();
   }
 
+  // map
   octx.drawImage(canvas, 0, headerH);
+
+  // notes label & box
+  const ny = headerH + canvas.height + gap;
+  octx.fillStyle = "#444";
+  octx.font = "13px system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif";
+  octx.textAlign = "left";
+  octx.textBaseline = "top";
+  octx.fillText(notesLabel, 10, ny);
+
+  const boxY = ny + labelH + 6;
+  const boxX = 10;
+  const boxW = out.width - 20;
+
+  // box
+  octx.strokeStyle = "#999";
+  octx.lineWidth = 1;
+  // rounded rect
+  roundRect(octx, boxX, boxY, boxW, boxH, 10);
+  octx.stroke();
+
+  // text (wrap + clip)
+  octx.save();
+  octx.beginPath();
+  octx.rect(boxX + boxPad, boxY + boxPad, boxW - boxPad * 2, boxH - boxPad * 2);
+  octx.clip();
+
+  octx.fillStyle = "#111";
+  octx.font = "13px system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif";
+  octx.textBaseline = "top";
+
+  const maxTextW = boxW - boxPad * 2;
+  const logicalLines = sanitizeBottomMemo(notesRaw).split("\n");
+  const wrapped = [];
+  for (const ln of logicalLines) {
+    if (ln === "") { wrapped.push(""); continue; }
+    wrapped.push(...wrapTextByChars(octx, ln, maxTextW));
+  }
+
+  for (let i = 0; i < Math.min(BOTTOM_MEMO_MAX_LINES, wrapped.length); i++) {
+    octx.fillText(wrapped[i], boxX + boxPad, boxY + boxPad + i * lineH);
+  }
+  octx.restore();
 
   out.toBlob((blob) => {
     if (!blob) return;
@@ -1308,6 +1582,7 @@ exportPngBtn.onclick = () => {
 
   // ★ 印刷（ポップアップなし：iframe方式）
   printBtn.onclick = () => {
+    commitTitleAndMemoNow();
     draw();
     const dataUrl = canvas.toDataURL("image/png");
 
@@ -1329,6 +1604,10 @@ exportPngBtn.onclick = () => {
     const title = escapeHtml(state.meta?.title || "Dungeon Map");
     const now = new Date().toLocaleString();
 
+    const notesRaw = String(state.meta?.bottomMemo || "");
+    const notesText = escapeHtml(notesRaw);
+    const notesLabel = (currentLang === "en") ? "Notes" : "メモ";
+
     doc.open();
     doc.write(`
       <!doctype html>
@@ -1344,6 +1623,11 @@ exportPngBtn.onclick = () => {
           .imgWrap { display:flex; justify-content:center; }
           img { max-width: 100%; height: auto; }
           .meta { text-align:center; color:#444; font-size:12px; margin-top:5mm; }
+
+          .notes { margin-top: 6mm; }
+          .notesLabel { font-size: 12px; color:#444; margin-bottom: 2mm; text-align:left; }
+          .notesBox { border:1px solid #999; border-radius:8px; padding:6mm; white-space:pre-wrap; font-size:12px; line-height:1.35; min-height: calc(1.35em * 3); }
+
       
     #coordRow{
       display:flex;
@@ -1370,6 +1654,11 @@ exportPngBtn.onclick = () => {
           <h1>${title}</h1>
           <div class="imgWrap">
             <img id="pimg" src="${dataUrl}" alt="Dungeon Map" />
+          </div>
+
+          <div class="notes">
+            <div class="notesLabel">${notesLabel}</div>
+            <div class="notesBox">${notesText}</div>
           </div>
           <div class="meta">${title} / ${now}</div>
         </div>
@@ -1460,6 +1749,7 @@ window.addEventListener("keydown", (e) => {
 
   autoload();
   syncTitleUI();
+  syncBottomMemoUI();
   updateHistoryButtons();
   draw();
 
