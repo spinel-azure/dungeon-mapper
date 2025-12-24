@@ -71,20 +71,18 @@ See LICENSE.md for the full terms.
 
 <details>
 <summary><strong>## 📝 Changelog / 更新履歴（クリックで開く）</strong></summary>
-### v2f_patched (2025-12-24)
-- 壁線データを拡張：{ color, style } に加えて mark（例：door）を追加し、壁ごとにマーク管理を可能に（{ color, style, mark } | null）
-- 壁描画ツールに「マーク（なし / 扉）」選択を追加（描画時設定として保持）
-- 扉マークを「壁線中央を短い棒線が貫通する」表現に変更（視認性向上）
-- 点線壁の描画を改善：setLineDash＋点線時 lineCap="butt"、線幅に応じてダッシュ間隔を可変
-- 旧JSON互換：旧形式（true / 色文字列 / {color, style}）読込時に新形式へ正規化（既存データをそのまま利用可能）
-- 線幅選択範囲を 2〜10 → 2〜4 に制限（UI＋内部クランプ）
 
-- Extended wall data structure: added mark (e.g., door) in addition to { color, style }, enabling per-wall marking ({ color, style, mark } | null)
-- Added a “Mark (None / Door)” selector to the wall drawing tool (kept as the current drawing setting)
-- Updated the door mark rendering to a “short bar crossing the center of the wall line” for better readability
-- Improved dashed wall rendering: uses setLineDash + lineCap="butt" for dashed lines, with dash/gap scaled by line width
-- Backward compatibility: older JSON formats (true / color string / {color, style}) are normalized to the new structure on load
-- Limited selectable wall line width from 2–10 to 2–4 (UI + internal clamping)
+### v2f_patched (2025-12-24)
+
+- 壁描画ツールに「マーク（なし/扉＋）」選択を追加
+- 壁線の線種を「実線/点線」切替可能に（点線描画対応）
+- 線幅の選択範囲を 2〜10 → 2〜4 に制限
+
+- Added a “Mark (None / Door+)” option to the wall drawing tool
+- Added wall line style switching: Solid / Dashed (dashed rendering supported)
+- Limited selectable line width from 2–10 to 2–4
+
+---
 
 ### v2f (2025-12-23)
 - グリッドの下に3行分のテキストボックスを設置  
