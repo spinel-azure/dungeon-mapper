@@ -271,7 +271,24 @@
     <span class="sep"></span>
 
     <span class="label" id="lblLineWidth">線幅</span>
-    <input id="wallWidth" type="number" min="2" max="10" value="4" style="width:72px" />
+    <input id="wallWidth" type="number" min="2" max="4" value="4" style="width:72px" />
+
+    <span class="sep"></span>
+
+    <span class="label" id="lblLineStyle">線種</span>
+    <select id="wallStyle" style="width:110px" title="Wall line style">
+      <option value="solid">Solid</option>
+      <option value="dashed">Dashed</option>
+    </select>
+
+    <span class="sep"></span>
+
+    <span class="label" id="lblWallMark">マーク</span>
+    <select id="wallMark" style="width:110px" title="Wall mark">
+      <option value="none">None</option>
+      <option value="door">Door</option>
+    </select>
+
   </div>
 
   <div class="group">
@@ -339,7 +356,7 @@
   <div class="panel hint">
     <strong id="opMemoTitle">操作メモ</strong>
     <ul style="margin:8px 0 0; padding-left:18px;">
-      <li id="memoWall"><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。</li>
+      <li id="memoWall"><b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色・線種［実線/点線］は選択可）。</li>
       <li id="memoFill"><b>塗り/塗消し</b>：クリックで1マス。<span class="kbd">Shift</span>+クリック（PC）または <span class="kbd">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。</li>
       <li id="memoIcon"><b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。</li>
       <li id="memoText"><b>文字</b>：セルをクリック→入力→OKで確定。</li>
@@ -404,6 +421,10 @@ const WALL_COLORS = [
   const lblFillColor = document.getElementById("lblFillColor");
   const lblWallColor = document.getElementById("lblWallColor");
   const lblLineWidth = document.getElementById("lblLineWidth");
+  const lblLineStyle = document.getElementById("lblLineStyle");
+  const wallStyleSel = document.getElementById("wallStyle");
+  const lblWallMark = document.getElementById("lblWallMark");
+  const wallMarkSel = document.getElementById("wallMark");
   const lblIcons = document.getElementById("lblIcons");
   const lblHistory = document.getElementById("lblHistory");
   const lblSaveExport = document.getElementById("lblSaveExport");
@@ -520,6 +541,12 @@ const WALL_COLORS = [
         fillColor: "塗り色",
         wallColor: "壁色",
         lineWidth: "線幅",
+        lineStyle: "線種",
+        wallMark: "マーク",
+        solid: "実線",
+        dashed: "点線",
+        markNone: "なし",
+        markDoor: "扉＋",
         icons: "アイコン",
         history: "履歴",
         saveExport: "保存/出力",
@@ -555,6 +582,8 @@ const WALL_COLORS = [
         fill: "セルを塗る",
         eraseFill: "塗りを消す",
         bucket: "塗り/塗消しの範囲(バケツ)。スマホはこれをON",
+        lineStyle: "壁線の線種（実線/点線）",
+        wallMark: "壁線のマーク（扉など）",
         highlight: "選択セルのハイライト表示を切替",
         icon: "絵文字アイコンを置く",
         eraseIcon: "アイコンを消す",
@@ -564,7 +593,7 @@ const WALL_COLORS = [
         clearAll: "全消去",
       },
       memo: {
-        wall: "<b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色は選択可）。",
+        wall: "<b>壁線/壁消し</b>：ドラッグで格子の辺にスナップして描画（壁色・線種［実線/点線］・マーク［なし/扉＋］を選択可）。",
         fill: "<b>塗り/塗消し</b>：クリックで1マス。<span class=\"kbd\">Shift</span>+クリック（PC）または <span class=\"kbd\">範囲</span>ON（スマホ/タブレット）で、壁に区切られた範囲を塗りつぶし。",
         icon: "<b>アイコン/アイ消し</b>：セルをクリックで配置/削除（メモは任意）。",
         text: "<b>文字</b>：セルをクリック→入力→OKで確定。",
@@ -586,6 +615,12 @@ const WALL_COLORS = [
         fillColor: "Fill",
         wallColor: "Wall",
         lineWidth: "Width",
+        lineStyle: "Style",
+        wallMark: "Mark",
+        solid: "Solid",
+        dashed: "Dashed",
+        markNone: "None",
+        markDoor: "Door +",
         icons: "Icons",
         history: "History",
         saveExport: "Save/Export",
@@ -621,6 +656,8 @@ const WALL_COLORS = [
         fill: "Paint a cell",
         eraseFill: "Erase paint",
         bucket: "Bucket fill (region by walls). Use this on touch devices",
+        lineStyle: "Wall line style (Solid/Dashed)",
+        wallMark: "Wall mark (e.g., doors)",
         highlight: "Toggle highlight of the selected cell",
         icon: "Place an emoji icon",
         eraseIcon: "Remove an icon",
@@ -630,7 +667,7 @@ const WALL_COLORS = [
         clearAll: "Clear everything",
       },
       memo: {
-        wall: "<b>Wall / Erase wall</b>: Drag to draw/erase snapped to grid edges (choose wall color).",
+        wall: "<b>Wall / Erase wall</b>: Drag to draw/erase snapped to grid edges (choose color, line style & mark).",
         fill: "<b>Fill / Erase fill</b>: Click to paint a single cell. Use <span class=\"kbd\">Shift</span>+Click (PC) or turn <span class=\"kbd\">Bucket</span> ON (mobile/tablet) to fill a region bounded by walls.",
         icon: "<b>Icon / Erase icon</b>: Click a cell to place/remove an icon (note is optional).",
         text: "<b>Text</b>: Click a cell → enter text → OK.",
@@ -686,6 +723,8 @@ const WALL_COLORS = [
     if (lblFillColor) lblFillColor.textContent = I18N[currentLang].labels.fillColor;
     if (lblWallColor) lblWallColor.textContent = I18N[currentLang].labels.wallColor;
     if (lblLineWidth) lblLineWidth.textContent = I18N[currentLang].labels.lineWidth;
+    if (lblLineStyle) lblLineStyle.textContent = I18N[currentLang].labels.lineStyle;
+    if (lblWallMark) lblWallMark.textContent = I18N[currentLang].labels.wallMark;
     if (lblIcons) lblIcons.textContent = I18N[currentLang].labels.icons;
     if (lblHistory) lblHistory.textContent = I18N[currentLang].labels.history;
     if (lblSaveExport) lblSaveExport.textContent = I18N[currentLang].labels.saveExport;
@@ -720,6 +759,20 @@ const WALL_COLORS = [
     toolButtons.fill.title = I18N[currentLang].titles.fill;
     toolButtons.eraseFill.title = I18N[currentLang].titles.eraseFill;
     bucketToggleBtn.title = I18N[currentLang].titles.bucket;
+    if (wallStyleSel) wallStyleSel.title = I18N[currentLang].titles.lineStyle;
+    if (wallStyleSel) {
+      const os = wallStyleSel.querySelector('option[value="solid"]');
+      const od = wallStyleSel.querySelector('option[value="dashed"]');
+      if (os) os.textContent = I18N[currentLang].labels.solid;
+      if (od) od.textContent = I18N[currentLang].labels.dashed;
+    }
+    if (wallMarkSel) wallMarkSel.title = I18N[currentLang].titles.wallMark;
+    if (wallMarkSel) {
+      const on = wallMarkSel.querySelector('option[value="none"]');
+      const od2 = wallMarkSel.querySelector('option[value="door"]');
+      if (on) on.textContent = I18N[currentLang].labels.markNone;
+      if (od2) od2.textContent = I18N[currentLang].labels.markDoor;
+    }
     toolButtons.icon.title = I18N[currentLang].titles.icon;
     toolButtons.eraseIcon.title = I18N[currentLang].titles.eraseIcon;
     toolButtons.text.title = I18N[currentLang].titles.text;
@@ -753,8 +806,9 @@ const WALL_COLORS = [
 
   // ===== State (layered) =====
   // cells[y][x] = color string or null
-  // wallsH[y][x] = null or color string (horizontal edges), y:0..GRID, x:0..GRID-1
-  // wallsV[y][x] = null or color string (vertical edges), y:0..GRID-1, x:0..GRID
+  // wallsH[y][x] = null or {color, style, mark} (horizontal edges), y:0..GRID, x:0..GRID-1
+  // wallsV[y][x] = null or {color, style, mark} (vertical edges), y:0..GRID-1, x:0..GRID
+  // style: "solid" | "dashed"
   // iconMap[y][x] = {type: emoji, note} or null
   // textMap[y][x] = string or ""
   const emptyState = () => ({
@@ -856,6 +910,25 @@ const WALL_COLORS = [
   // ===== Palette UI =====
   let selectedColor = PALETTE[4]; // default yellow
   let selectedWallColor = WALL_COLORS[0]; // default black
+  let selectedWallStyle = (() => { try { return localStorage.getItem("dm_wallStyle") || "solid"; } catch { return "solid"; } })();
+  if (selectedWallStyle !== "dashed") selectedWallStyle = "solid";
+  if (wallStyleSel) {
+    wallStyleSel.value = selectedWallStyle;
+    wallStyleSel.addEventListener("change", () => {
+      selectedWallStyle = (wallStyleSel.value === "dashed") ? "dashed" : "solid";
+      try { localStorage.setItem("dm_wallStyle", selectedWallStyle); } catch {}
+    });
+  }
+
+  let selectedWallMark = (() => { try { return localStorage.getItem("dm_wallMark") || "none"; } catch { return "none"; } })();
+  if (selectedWallMark !== "door") selectedWallMark = "none";
+  if (wallMarkSel) {
+    wallMarkSel.value = selectedWallMark;
+    wallMarkSel.addEventListener("change", () => {
+      selectedWallMark = (wallMarkSel.value === "door") ? "door" : "none";
+      try { localStorage.setItem("dm_wallMark", selectedWallMark); } catch {}
+    });
+  }
 
   function renderSwatches() {
     swatchesEl.innerHTML = "";
@@ -1074,37 +1147,98 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
   }
 
   function drawWalls() {
-    const w = clamp(parseInt(wallWidthInput.value || "4",10), 2, 10);
+    const w = clamp(parseInt(wallWidthInput.value || "4",10), 2, 4);
+
+    const toSpec = (v) => {
+      if (!v) return null;
+      if (typeof v === "string") return { color: v, style: "solid", mark: "none" };
+      if (typeof v === "object") {
+        const color = (typeof v.color === "string") ? v.color : null;
+        if (!color) return null;
+        const style = (v.style === "dashed") ? "dashed" : "solid";
+        const mark = (v.mark === "door") ? "door" : "none";
+        return { color, style, mark };
+      }
+      return null;
+    };
+
+    const drawDoorMark = (cx, cy, color, orient) => {
+      // Draw a short bar crossing the wall at its center.
+      // orient: "h" for horizontal wall (draw vertical bar), "v" for vertical wall (draw horizontal bar)
+      const len = Math.round(Math.max(10, CELL * 0.28));
+      const lw = Math.max(2, w - 1);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.setLineDash([]);
+      ctx.lineCap = "butt";
+      ctx.beginPath();
+      if (orient === "h") {
+        // vertical bar crosses horizontal wall
+        ctx.moveTo(cx, cy - len / 2);
+        ctx.lineTo(cx, cy + len / 2);
+      } else {
+        // horizontal bar crosses vertical wall
+        ctx.moveTo(cx - len / 2, cy);
+        ctx.lineTo(cx + len / 2, cy);
+      }
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    const applyLineStyle = (style) => {
+      if (style === "dashed") {
+        const dash = Math.max(2, w);
+        const gap  = dash + 2; // keep gap > width to avoid looking solid
+        ctx.setLineDash([dash, gap]);
+        ctx.lineCap = "butt";
+      } else {
+        ctx.setLineDash([]);
+        ctx.lineCap = "square";
+      }
+    };
+
     ctx.save();
     ctx.lineWidth = w;
-    ctx.lineCap = "square";
 
     // horizontal
     for (let y=0;y<=GRID;y++){
       for (let x=0;x<GRID;x++){
-        const col = state.wallsH[y][x];
-        if (!col) continue;
-        ctx.strokeStyle = col;
+        const spec = toSpec(state.wallsH[y][x]);
+        if (!spec) continue;
+        ctx.strokeStyle = spec.color;
+        applyLineStyle(spec.style);
         const x0 = OFFSET + x*CELL;
         const y0 = OFFSET + y*CELL;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(x0 + CELL, y0);
         ctx.stroke();
+        if (spec.mark === "door") {
+          const cx = x0 + CELL/2;
+          const cy = y0; // centered on the wall line
+          drawDoorMark(cx, cy, spec.color, "h");
+        }
       }
     }
     // vertical
     for (let y=0;y<GRID;y++){
       for (let x=0;x<=GRID;x++){
-        const col = state.wallsV[y][x];
-        if (!col) continue;
-        ctx.strokeStyle = col;
+        const spec = toSpec(state.wallsV[y][x]);
+        if (!spec) continue;
+        ctx.strokeStyle = spec.color;
+        applyLineStyle(spec.style);
         const x0 = OFFSET + x*CELL;
         const y0 = OFFSET + y*CELL;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(x0, y0 + CELL);
         ctx.stroke();
+        if (spec.mark === "door") {
+          const cx = x0; // centered on the wall line
+          const cy = y0 + CELL/2;
+          drawDoorMark(cx, cy, spec.color, "v");
+        }
       }
     }
 
@@ -1253,7 +1387,7 @@ function bucketFillByWalls(sx, sy, newColorOrNull) {
     if (!lastGridPt) { lastGridPt = p; return; }
     if (p.x === lastGridPt.x && p.y === lastGridPt.y) return;
 
-    const val = (currentTool === Tool.WALL) ? selectedWallColor : null;
+    const val = (currentTool === Tool.WALL) ? { color: selectedWallColor, style: selectedWallStyle, mark: selectedWallMark } : null;
     applyWallPath(lastGridPt, p, val);
     lastGridPt = p;
 
@@ -1427,24 +1561,37 @@ function downloadBlob(blob, filename) {
   };
 
   function normalizeLoaded(obj) {
-    // 旧版boolean壁を吸収（true->黒、false->null）
+    // 旧版の壁データを正規化
+    // - true -> {color:"#111111", style:"solid"} （旧挙動互換）
+    // - "#RRGGBB" -> {color: "#RRGGBB", style:"solid"}
+    // - {color, style} -> そのまま（styleは solid/dashed に丸め）
     if (!obj) return obj;
+
+    const normWall = (v) => {
+      if (v === true) return { color: "#111111", style: "solid", mark: "none" };
+      if (v === false || v == null) return null;
+      if (typeof v === "string") return { color: v, style: "solid", mark: "none" };
+      if (typeof v === "object") {
+        const color = (typeof v.color === "string") ? v.color : null;
+        if (!color) return null;
+        const style = (v.style === "dashed") ? "dashed" : "solid";
+        const mark = (v.mark === "door") ? "door" : "none";
+        return { color, style, mark };
+      }
+      return null;
+    };
 
     if (Array.isArray(obj.wallsH)) {
       for (let y=0;y<obj.wallsH.length;y++){
         for (let x=0;x<obj.wallsH[y].length;x++){
-          const v = obj.wallsH[y][x];
-          if (v === true) obj.wallsH[y][x] = "#111111";
-          else if (v === false) obj.wallsH[y][x] = null;
+          obj.wallsH[y][x] = normWall(obj.wallsH[y][x]);
         }
       }
     }
     if (Array.isArray(obj.wallsV)) {
       for (let y=0;y<obj.wallsV.length;y++){
         for (let x=0;x<obj.wallsV[y].length;x++){
-          const v = obj.wallsV[y][x];
-          if (v === true) obj.wallsV[y][x] = "#111111";
-          else if (v === false) obj.wallsV[y][x] = null;
+          obj.wallsV[y][x] = normWall(obj.wallsV[y][x]);
         }
       }
     }
